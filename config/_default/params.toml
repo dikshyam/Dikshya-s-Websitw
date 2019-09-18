@@ -85,7 +85,7 @@ edit_page = {repo_url = "https://github.com/gcushen/hugo-academic", repo_branch 
 ############################
 
 # Enter contact details (optional). To hide a field, clear it to "".
-email = "dmohanty@uncc.edu"
+email = "dikshyamohanty94@gmail.com"
 phone = "(704) 626-9420"
 
 # Address
@@ -97,7 +97,7 @@ address = {street = "320 E 9th St", city = "Charlotte", region = "NC", postcode 
 coordinates = {latitude = "35.228444", longitude = "-80.835000"}
 
 # Directions for visitors to locate you.
-directions = "Enter Building 1 and take the stairs to Office 200 on Floor 2"
+directions = "Enter Building and take the elevator to Office 704 on Floor 7"
 
 # Office hours
 # A list of your office hours. To remove, set to an empty list `[]`.
