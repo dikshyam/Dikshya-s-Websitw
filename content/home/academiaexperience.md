@@ -6,7 +6,7 @@ active = true  # Activate this widget? true/false
 weight = 50  # Order that this section will appear.
 
 title = "Experience"
-subtitle = "All about the ACADEMICS"
+subtitle = "in the Academics"
 
 # Date format for experience
 #   Refer to https://sourcethemes.com/academic/docs/customization/#date-format
@@ -27,10 +27,9 @@ date_format = "Jan 2006"
   date_end = "2019-05-05"
   description = """
   Courses:
-  * DSBA 6156: Applied Machine Learning by Dr. Siddharth Krishnan (College of Computing and Informatics, UNCC)
   
-  Responsibilities include:
-  
+  * DSBA 6156: [Applied Machine Learning](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86713&print) by Dr. Siddharth Krishnan (College of Computing and Informatics, UNCC)
+  * Link to the [repository](https://github.com/dikshyam/DSBA6156-AML) on GitHub
 
   """
 
@@ -44,11 +43,12 @@ date_format = "Jan 2006"
   date_end = "2019-05-05"
   description = """
   Courses:
-  * Business Intelligence Analytics by Dr. SungJung Park (Belk College of Business, UNCC)  
-  * Big Data for Competitive Advantage by Dr. Gabriel Terejanu (College of Computing and Informatics, UNCC)
   
-  Responsibilities include:
-  * My responsibilities include assisting professors in preparing the course plan and schedule, grading assignments and exams, mentoring students and conducting lab classes.
+  * [Business Intelligence Analytics](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86717&print) by Dr. SungJung Park (Belk College of Business, UNCC)
+  * Link to the [repository](https://github.com/dikshyam/DSBA6201-BIA) on GitHub
+  
+  * [Big Data for Competitive Advantage](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86577&print) by Dr. Gabriel Terejanu (College of Computing and Informatics, UNCC)
+  
 """
 
 [[experience]]
