@@ -1,6 +1,6 @@
 ---
 # Display name
-name: Nelson Bighetti
+name: Dikshya Mohanty
 
 # Username (this should match the folder name)
 authors:
@@ -10,32 +10,30 @@ authors:
 superuser: true
 
 # Role/position
-role: Professor of Artificial Intelligence
+role: Student
 
 # Organizations/Affiliations
 organizations:
-- name: Stanford University
-  url: ""
+- name: University of North Carolina at Charlotte
+  url: "https://www.uncc.edu/"
 
 # Short bio (displayed in user profile at end of posts)
 bio: My research interests include distributed robotics, mobile computing and programmable matter.
 
 interests:
-- Artificial Intelligence
-- Computational Linguistics
-- Information Retrieval
+- Statistics
+- Machine Learning
+- Natural Language Processing
 
 education:
   courses:
-  - course: PhD in Artificial Intelligence
-    institution: Stanford University
-    year: 2012
-  - course: MEng in Artificial Intelligence
-    institution: Massachusetts Institute of Technology
-    year: 2009
-  - course: BSc in Artificial Intelligence
-    institution: Massachusetts Institute of Technology
-    year: 2008
+  - course: Masters in Data Science and Business Analytics
+    institution: University of North Carolina, Charlotte
+    year: 2019
+  - course: Bachelor’s of Technology in Computer Science
+    institution: Indira Gandhi Institute of Technology, India
+    year: 2016
+
 
 # Social/Academic Networking
 # For available icons, see: https://sourcethemes.com/academic/docs/widgets/#icons
