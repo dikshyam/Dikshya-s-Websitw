@@ -5,7 +5,7 @@ headless = true  # This file represents a page section.
 active = true  # Activate this widget? true/false
 weight = 60  # Order that this section will appear.
 
-title = "Accomplish&shy;ments"
+title = "Certificates"
 subtitle = ""
 
 # Date format
@@ -22,7 +22,6 @@ date_format = "Jan 2006"
   organization = "Coursera"
   organization_url = "https://www.coursera.org"
   title = "Bayesian Statistics: From concepts to Data Analysis"
-
 
 [[item]]
   organization = "Coursera"
