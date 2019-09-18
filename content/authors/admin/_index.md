@@ -71,6 +71,8 @@ user_groups:
 - Visitors
 ---
 
-Nelson Bighetti is a professor of artificial intelligence at the Stanford AI Lab. His research interests include distributed robotics, mobile computing and programmable matter. He leads the Robotic Neurobiology group, which develops self-reconfiguring robots, systems of self-organizing robots, and mobile sensor networks.
+**Dikshya** is a Data Science enthusiast, skilled in machine learning, statistics, problem solving, and programming. Among others, her research activities include applications of machine learning to solve problems in finance and healthcare. After receiving her Bachelor's from India, Dikshya joined the University of North Carolina as Graduate Student majoring in Data Science.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed neque elit, tristique placerat feugiat ac, facilisis vitae arcu. Proin eget egestas augue. Praesent ut sem nec arcu pellentesque aliquet. Duis dapibus diam vel metus tempus vulputate. 
+Dikshya has many years of experience with coding in Python. Dikshya loves to write and talk about data science, machine learning, and Python, and she is very motivated to help people developing data-driven solutions without necessarily requiring a machine learning background. 
+
+In her free time, Dikshya loves to contribute to open source projects, and methods that he implemented are now successfully used in machine learning competitions such as Kaggle.
