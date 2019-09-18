@@ -37,5 +37,17 @@ subtitle = ""
   icon_pack = "fas"
   name = "Research"
   description = "70%"
+  
+[[feature]]
+  icon = "r-project"
+  icon_pack = "fas"
+  name = "R"
+  description = "90%"
+
+[[feature]]
+  icon = "infinity"
+  icon_pack = "fas"
+  name = "Probability & Calculus"
+  description = "90%"
 
 +++
