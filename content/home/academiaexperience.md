@@ -49,6 +49,7 @@ date_format = "Jan 2006"
   
   Responsibilities include:
   * My responsibilities include assisting professors in preparing the course plan and schedule, grading assignments and exams, mentoring students and conducting lab classes.
+"""
 
 [[experience]]
   title = "Research Assistant"
@@ -58,8 +59,8 @@ date_format = "Jan 2006"
   date_start = "2019-01-13"
   date_end = "2019-05-05"
   description = """
-  
   Responsibilities include:
+  
   * Working with Dr. Victor Chen (Belk College of Business, UNCC) and Dr. Wlodek Zadrozny (College of Computing and Informatics, UNCC; former IBM Watson Employee).
   * Primary focus of research is building a Causality map between various dependent and independent variables. We are developing a machine learning algorithm, built on natural language processing (NLP) models, that mines a large volume of scientific publications into a causal network for multi-stakeholder KPIs. This algorithm will be built upon Mine Semantic Analysis (MSA) (a result from the PI’s previous research, funded by NSF I-Corps Grant #1624035 during 2016-2017) as well as its descendant Concept Multimodal Embedding (CME).
   
