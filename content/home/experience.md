@@ -21,7 +21,7 @@ date_format = "Jan 2006"
   title = "Applied Science Intern"
   company = "Amazon.com"
   company_url = "https://www.amazon.com/"
-  location = "Seattle"
+  location = "Seattle, WA, US"
   date_start = "2019-05-13"
   date_end = "2019-08-16"
   description = """
@@ -33,11 +33,20 @@ date_format = "Jan 2006"
   """
 
 [[experience]]
-  title = "Professor"
-  company = "University X"
+  title = "Data Science Developer"
+  company = "Tata Consultancy Services"
   company_url = ""
-  location = "California"
-  date_end = "2016-12-31"
-  description = """Taught electronic engineering and researched semiconductor physics."""
+  location = "Pune, India"
+  date_start = "2016-07-04"
+  date_end = "2018-07-06"
+  description = """
+  Responsibilities include:
+  
+  * Participated in architectural, design, and product sessions
+  * Developed innovative solutions based on product requirements and business challenges in both Python and R
+  * Researched and applied new technologies and best practices in Machine Learning including PyTorch, TensorFlow, NLTK, Spacy, Sklearn, Numpy, Scikit
+  * Worked in Unsupervised Natural Language Processing, Image Processing, Document Classification, Predictive Modeling
+  * Managed data over PostgreSQL, MongoDB and Elasticsearch
+"""
 
 +++
