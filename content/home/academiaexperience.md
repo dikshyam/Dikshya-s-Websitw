@@ -28,8 +28,7 @@ date_format = "Jan 2006"
   description = """
   Courses:
   
-  * DSBA 6156: [Applied Machine Learning](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86713&print) by Dr. Siddharth Krishnan (College of Computing and Informatics, UNCC)
-  * Link to the [repository](https://github.com/dikshyam/DSBA6156-AML) on GitHub
+  * DSBA 6156: [Applied Machine Learning](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86713&print) by Dr. Siddharth Krishnan (College of Computing and Informatics, UNCC). Link to the [repository] (https://github.com/dikshyam/DSBA6156-AML) on GitHub
 
   """
 
@@ -44,8 +43,7 @@ date_format = "Jan 2006"
   description = """
   Courses:
   
-  * [Business Intelligence Analytics](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86717&print) by Dr. SungJung Park (Belk College of Business, UNCC)
-  * Link to the [repository](https://github.com/dikshyam/DSBA6201-BIA) on GitHub
+  * [Business Intelligence Analytics](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86717&print) by Dr. SungJung Park (Belk College of Business, UNCC). Link to the [repository](https://github.com/dikshyam/DSBA6201-BIA) on GitHub
   
   * [Big Data for Competitive Advantage](https://catalog.uncc.edu/preview_course.php?catoid=26&coid=86577&print) by Dr. Gabriel Terejanu (College of Computing and Informatics, UNCC)
   
@@ -56,7 +54,7 @@ date_format = "Jan 2006"
   company = "UNCC"
   company_url = ""
   location = ""
-  date_start = "2019-01-13"
+  date_start = "2018-10-15"
   date_end = "2019-05-05"
   description = """
   Responsibilities include:
