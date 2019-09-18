@@ -7,7 +7,7 @@ headless = true  # This file represents a page section.
 active = true  # Activate this widget? true/false
 weight = 90  # Order that this section will appear.
 
-title = "Recent Publications"
+title = "Courses"
 subtitle = ""
 
 [content]
@@ -29,7 +29,18 @@ subtitle = ""
     category = ""
     publication_type = ""
     exclude_featured = false
-  
+
+[[item]]
+  organization = "Coursera"
+  organization_url = "https://www.coursera.org"
+  title = "Neural Networks and Deep Learning"
+  url = ""
+  certificate_url = "https://www.coursera.org"
+  date_start = "2018-10-01"
+  date_end = ""
+  description = ""
+
+
 [design]
   # Toggle between the various page layout types.
   #   1 = List
