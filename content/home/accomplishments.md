@@ -22,26 +22,31 @@ date_format = "Jan 2006"
   organization = "Coursera"
   organization_url = "https://www.coursera.org"
   title = "Bayesian Statistics: From concepts to Data Analysis"
+  date_start = "2019-08-15"
 
 [[item]]
   organization = "Coursera"
   organization_url = "https://www.coursera.org"
   title = "Machine Learning: Stanford University"
+  date_start = "2019-08-15"
 
 [[item]]
   organization = "DataCamp"
   organization_url = "https://www.datacamp.com"
   title = "Supervised Learning with Scikit-Learn"
+  date_start = "2019-08-15"
   
 [[item]]
   organization = "DataCamp"
   organization_url = "https://www.datacamp.com"
   title = "Unsupervised Learning with Python"
+  date_start = "2019-08-15"
 
 [[item]]
   organization = "DataCamp"
   organization_url = "https://www.datacamp.com"
   title = "Deep Learning with Python"
+  date_start = "2019-08-15"
   
 
 +++
