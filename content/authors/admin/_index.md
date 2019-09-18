@@ -43,15 +43,18 @@ social:
 - icon: envelope
   icon_pack: fas
   link: '#contact'  # For a direct email link, use "mailto:test@example.org".
-- icon: twitter
+- icon: linkedin
   icon_pack: fab
-  link: https://twitter.com/GeorgeCushen
-- icon: google-scholar
+  link: https://www.linkedin.com/in/dikshya-mohanty-79b61ba3/
+- icon: facebook
   icon_pack: ai
-  link: https://scholar.google.co.uk/citations?user=sIwtMXoAAAAJ
+  link: https://www.facebook.com/dikshya94
 - icon: github
   icon_pack: fab
-  link: https://github.com/gcushen
+  link: https://github.com/dikshyam
+- icon: instagram
+  icon_pack: fab
+  link: https://www.instagram.com/dikshyamohanty_/
 # Link to a PDF of your resume/CV from the About widget.
 # To enable, copy your resume/CV to `static/files/cv.pdf` and uncomment the lines below.  
 # - icon: cv
