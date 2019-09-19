@@ -18,10 +18,10 @@ draft: false
 # Placement options: 1 = Full column width, 2 = Out-set, 3 = Screen-width
 # Focal point options: Smart, Center, TopLeft, Top, TopRight, Left, Right, BottomLeft, Bottom, BottomRight
 image:
-  placement: 2
+  placement: 3
   caption: 'Image credit: [**Quartz**](https://qz.com/1635952/how-do-amazon-go-stores-work/)'
-  focal_point: ""
-  preview_only: false
+  focal_point: "Center"
+  preview_only: true
 
 # Projects (optional).
 #   Associate this post with one or more of your projects.
