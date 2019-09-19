@@ -47,4 +47,15 @@ subtitle = ""
  css_class = ""
 +++
 
+**What's New?**
+
+- **[Pandas 101]**(https://github.com/dikshyam/DSBA6156-AML/tree/master/Pandas101)
+
+{{% alert note %}}
+**Quote of the Week** 
+Only two things are infinite, the universe and human stupidity, and I'm not sure about the former.
+
+Albert Einstein.
+{{% /alert %}}
+
 
