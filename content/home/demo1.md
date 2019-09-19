@@ -6,7 +6,7 @@
 widget = "blank"  # See https://sourcethemes.com/academic/docs/page-builder/
 headless = true  # This file represents a page section.
 active = true  # Activate this widget? true/false
-weight = 10  # Order that this section will appear.
+weight = 12  # Order that this section will appear.
 
 title = "Welcome to **Dikshya's** Portfolio!"
 subtitle = ""
@@ -47,15 +47,8 @@ subtitle = ""
  css_class = ""
 +++
 
-**What's New?**
+**Quote of the Week** 
 
-- [x]**[Pandas 101](https://github.com/dikshyam/DSBA6156-AML/tree/master/Pandas101)**
-- [x]**[My Internship Experience](https://meetdikshya.netlify.com/post/amazon/)**
-
-**Coming up Soon**
-
-- [ ]**Where Stats meet ML: Chapter:1**
-
-
+_Only two things are infinite, the universe and human stupidity, and I'm not sure about the former_: Albert Einstein.
 
 
