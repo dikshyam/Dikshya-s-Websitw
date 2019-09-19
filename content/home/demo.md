@@ -6,7 +6,7 @@
 widget = "blank"  # See https://sourcethemes.com/academic/docs/page-builder/
 headless = true  # This file represents a page section.
 active = true  # Activate this widget? true/false
-weight = 5  # Order that this section will appear.
+weight = 10  # Order that this section will appear.
 
 title = "Welcome to **Dikshya's** Portfolio!"
 subtitle = ""
@@ -53,6 +53,6 @@ subtitle = ""
 
 **Quote of the Week** 
 
-Only two things are infinite, the universe and human stupidity, and I'm not sure about the former : Albert Einstein.
+- * Only two things are infinite, the universe and human stupidity, and I'm not sure about the former * : Albert Einstein.
 
 

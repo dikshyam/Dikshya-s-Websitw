@@ -72,7 +72,7 @@ user_groups:
 ---
 
 
-**Dikshya** is a Data Science enthusiast, skilled in machine learning, statistics, problem solving, and programming. Among others, her research activities include applications of machine learning to solve problems in finance and healthcare. After receiving her Bachelor's from India, she worked in the Research and Analytics team of TCS for 2 year. Soon after, Dikshya joined the University of North Carolina as Graduate Student majoring in Data Science.
+**Dikshya** is a Data Science enthusiast, skilled in machine learning, statistics, problem solving, and programming. Among others, her research activities include applications of machine learning to solve problems in finance and healthcare. After receiving her Bachelor's from India, she worked in the Research and Analytics team of TCS for 2 years. Soon after, Dikshya joined the University of North Carolina as Graduate Student majoring in Data Science.
 
 Dikshya has 2+ years of experience with coding in Python. Dikshya loves to write and talk about data science, machine learning, and Python, and she is very motivated to help people developing data-driven solutions without necessarily requiring a machine learning background. She's served as the Teaching Assistant for a couple of highly technical courses. She is passionate about teaching and revels in sharing learning with students who want to learn.
 
