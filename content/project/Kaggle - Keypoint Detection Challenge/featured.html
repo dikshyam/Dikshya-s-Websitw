@@ -1,0 +1,1782 @@
+
+
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    
+    <title>Using convolutional neural nets to detect facial keypoints tutorial &mdash; Daniel Nouri's Blog</title>
+
+<link rel="alternate" type="application/rss+xml" title="RSS 2.0" href="/notes/feed/index.xml" />
+<link rel="alternate" type="application/atom+xml" title="Atom 1.0"
+href="/notes/feed/atom/index.xml" />
+<link rel='stylesheet' href='/notes/css/pygments_murphy.css' type='text/css' />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="author" content="Daniel Nouri">
+
+<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
+<script src="//netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+
+<link rel="stylesheet" href="//danielnouri.org/theme/bolt-mod.css">
+
+
+  </head>
+  <body>
+    <div id="page">
+      
+      <div class="navbar navbar-default">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-8 col-lg-offset-2">
+
+
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/"><i class="fa fa-road"></i><span class="title-long">&nbsp;danielnouri.org</span></a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="/">Home</a></li>
+            <li class="active"><a href="/notes/">Blog</a></li>
+            <li><a href="/#contact">Contact</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+        </div>
+        </div>
+      </div>
+    </div>
+
+
+      <div id="main_block">
+        <div id="prose_block">
+          
+
+
+<div class="container">
+  <div class="row">
+    <div class="col-lg-8 col-lg-offset-2">
+
+  <a name="using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial"></a>
+  <h1 class="blog_post_title"><a href="/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial" rel="bookmark" title="Permanent Link to Using convolutional neural nets to detect facial keypoints tutorial">Using convolutional neural nets to detect facial keypoints tutorial</a></h1>
+  <p><small>December 17, 2014 | categories: 
+
+<a href='/notes/category/python'>Python</a>, <a href='/notes/category/deep-learning'>Deep Learning</a>, <a href='/notes/category/programming'>Programming</a>, <a href='/notes/category/tutorial'>Tutorial</a>, <a href='/notes/category/machine-learning'>Machine Learning</a>
+ | <a href="http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial#disqus_thread">View Comments</a>
+</small></p>
+  <div class="post-article">
+    
+  <div class="document">
+<p>This is a hands-on tutorial on deep learning.  Step by step, we'll go
+about building a solution for the <a class="reference external" href="https://www.kaggle.com/c/facial-keypoints-detection/leaderboard">Facial Keypoint Detection Kaggle
+challenge</a>.
+The tutorial introduces <a class="reference external" href="https://github.com/benanne/Lasagne">Lasagne</a>, a new library for building
+neural networks with Python and <a class="reference external" href="http://deeplearning.net/software/theano/">Theano</a>.  We'll use Lasagne to
+implement a couple of network architectures, talk about data
+augmentation, dropout, the importance of momentum, and pre-training.
+Some of these methods will help us improve our results quite a bit.</p>
+<p>I'll assume that you already know a fair bit about neural nets.
+That's because we won't talk about much of the background of how
+neural nets work; there's a few of good books and videos for that,
+like the <a class="reference external" href="http://neuralnetworksanddeeplearning.com/">Neural Networks and Deep Learning online book</a>.  Alec Radford's talk
+<a class="reference external" href="https://www.youtube.com/watch?v=S75EdAcXHKk">Deep Learning with Python's Theano library</a> is a great quick
+introduction.  Make sure you also check out Andrej Karpathy's
+mind-blowing <a class="reference external" href="http://cs.stanford.edu/people/karpathy/convnetjs/">ConvNetJS Browser Demos</a>.</p>
+<div class="contents topic" id="tutorial-contents">
+<p class="topic-title first">Tutorial Contents</p>
+<ul class="simple">
+<li><a class="reference internal" href="#prerequisites" id="id1">Prerequisites</a></li>
+<li><a class="reference internal" href="#the-data" id="id2">The data</a></li>
+<li><a class="reference internal" href="#first-model-a-single-hidden-layer" id="id3">First model: a single hidden layer</a></li>
+<li><a class="reference internal" href="#testing-it-out" id="id4">Testing it out</a></li>
+<li><a class="reference internal" href="#second-model-convolutions" id="id5">Second model: convolutions</a></li>
+<li><a class="reference internal" href="#data-augmentation" id="id6">Data augmentation</a></li>
+<li><a class="reference internal" href="#changing-learning-rate-and-momentum-over-time" id="id7">Changing learning rate and momentum over time</a></li>
+<li><a class="reference internal" href="#dropout" id="id8">Dropout</a></li>
+<li><a class="reference internal" href="#training-specialists" id="id9">Training specialists</a></li>
+<li><a class="reference internal" href="#supervised-pre-training" id="id10">Supervised pre-training</a></li>
+<li><a class="reference internal" href="#conclusion" id="id11">Conclusion</a></li>
+</ul>
+</div>
+<div class="section" id="prerequisites">
+<h3><a class="toc-backref" href="#id1">Prerequisites</a></h3>
+<p>You don't need to type the code and execute it yourself if you just
+want to follow along.  But here's the installation instructions for
+those who have access to a CUDA-capable GPU and want to run the
+experiments themselves.</p>
+<p>I assume you have the CUDA toolkit, Python 2.7.x, numpy, pandas,
+matplotlib, and scikit-learn installed.  To install the remaining
+dependencies, such as Lasagne and Theano run this command:</p>
+
+
+<div class="pygments_murphy"><pre>pip install -r https://raw.githubusercontent.com/dnouri/kfkd-tutorial/master/requirements.txt
+</pre></div>
+
+
+
+<p>(Note that for sake of brevity, I'm not including commands to create a
+<a class="reference external" href="https://virtualenv.readthedocs.org">virtualenv</a> and activate it.
+But you should.)</p>
+<p>If everything worked well, you should be able to find the
+<tt class="docutils literal">src/lasagne/examples/</tt> directory in your virtualenv and run the
+<a class="reference external" href="http://en.wikipedia.org/wiki/MNIST_database">MNIST</a> example.  This
+is sort of the &quot;Hello, world&quot; of neural nets.  There's ten classes,
+one for each digit between 0 and 9, and the input is grayscale images
+of handwritten digits of size 28x28.</p>
+
+
+<div class="pygments_murphy"><pre><span class="nb">cd </span>src/lasagne/examples/
+python mnist.py
+</pre></div>
+
+
+
+<p>This command will start printing out stuff after thirty seconds or so.
+The reason it takes a while is that Lasagne uses Theano to do the
+heavy lifting; Theano in turn is a &quot;optimizing GPU-meta-programming
+code generating array oriented optimizing math compiler in Python,&quot;
+and it will generate C code that needs to be compiled before training
+can happen.  Luckily, we have to pay the price for this overhead only
+on the first run.</p>
+<p>Once training starts, you'll see output like this:</p>
+
+
+<div class="pygments_murphy"><pre>Epoch 1 of 500
+  training loss:            1.352731
+  validation loss:          0.466565
+  validation accuracy:              87.70 %
+Epoch 2 of 500
+  training loss:            0.591704
+  validation loss:          0.326680
+  validation accuracy:              90.64 %
+Epoch 3 of 500
+  training loss:            0.464022
+  validation loss:          0.275699
+  validation accuracy:              91.98 %
+...
+</pre></div>
+
+
+
+<p>If you let training run long enough, you'll notice that after about 75
+epochs, it'll have reached a test accuracy of around 98%.</p>
+<p>If you have a GPU, you'll want to <a class="reference external" href="http://deeplearning.net/software/theano/tutorial/using_gpu.html">configure Theano to use it</a>.
+You'll want to create a <tt class="docutils literal"><span class="pre">~/.theanorc</span></tt> file in your home directory
+that looks something like this:</p>
+
+
+<div class="pygments_murphy"><pre><span class="k">[global]</span>
+<span class="na">floatX</span> <span class="o">=</span> <span class="s">float32</span>
+<span class="na">device</span> <span class="o">=</span> <span class="s">gpu0</span>
+
+<span class="k">[lib]</span>
+<span class="na">cnmem</span> <span class="o">=</span> <span class="s">1</span>
+</pre></div>
+
+
+
+<p>(Should any of the instructions in this tutorial not work for you,
+submit a <a class="reference external" href="https://github.com/dnouri/kfkd-tutorial/issues">bug report here</a>.)</p>
+</div>
+<div class="section" id="the-data">
+<h3><a class="toc-backref" href="#id2">The data</a></h3>
+<p>The training dataset for the Facial Keypoint Detection challenge
+consists of 7,049 96x96 gray-scale images.  For each image, we're
+supposed learn to find the correct position (the x and y coordinates)
+of 15 keypoints, such as <tt class="docutils literal">left_eye_center</tt>,
+<tt class="docutils literal">right_eye_outer_corner</tt>, <tt class="docutils literal">mouth_center_bottom_lip</tt>, and so on.</p>
+<div class="figure">
+<img alt="https://kaggle2.blob.core.windows.net/competitions/kaggle/3486/media/face1_with_keypoints.png" class="img-responsive" src="https://kaggle2.blob.core.windows.net/competitions/kaggle/3486/media/face1_with_keypoints.png" />
+<p class="caption">An example of one of the faces with three keypoints marked.</p>
+</div>
+<p>An interesting twist with the dataset is that for some of the
+keypoints we only have about 2,000 labels, while other keypoints have
+more than 7,000 labels available for training.</p>
+<p>Let's write some Python code that loads the data from the <a class="reference external" href="https://www.kaggle.com/c/facial-keypoints-detection/data">CSV files
+provided</a>.
+We'll write a function that can load both the training and the test
+data.  These two datasets differ in that the test data doesn't contain
+the target values; it's the goal of the challenge to predict these.
+Here's our <tt class="docutils literal">load()</tt> function:</p>
+
+
+<div class="pygments_murphy"><pre><span class="c"># file kfkd.py</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pandas.io.parsers</span> <span class="kn">import</span> <span class="n">read_csv</span>
+<span class="kn">from</span> <span class="nn">sklearn.utils</span> <span class="kn">import</span> <span class="n">shuffle</span>
+
+
+<span class="n">FTRAIN</span> <span class="o">=</span> <span class="s">&#39;~/data/kaggle-facial-keypoint-detection/training.csv&#39;</span>
+<span class="n">FTEST</span> <span class="o">=</span> <span class="s">&#39;~/data/kaggle-facial-keypoint-detection/test.csv&#39;</span>
+
+
+<span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Loads data from FTEST if *test* is True, otherwise from FTRAIN.</span>
+<span class="sd">    Pass a list of *cols* if you&#39;re only interested in a subset of the</span>
+<span class="sd">    target columns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fname</span> <span class="o">=</span> <span class="n">FTEST</span> <span class="k">if</span> <span class="n">test</span> <span class="k">else</span> <span class="n">FTRAIN</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">fname</span><span class="p">))</span>  <span class="c"># load pandas dataframe</span>
+
+    <span class="c"># The Image column has pixel values separated by space; convert</span>
+    <span class="c"># the values to numpy arrays:</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">&#39;Image&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s">&#39;Image&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">im</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">fromstring</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s">&#39; &#39;</span><span class="p">))</span>
+
+    <span class="k">if</span> <span class="n">cols</span><span class="p">:</span>  <span class="c"># get a subset of columns</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="s">&#39;Image&#39;</span><span class="p">]]</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">count</span><span class="p">())</span>  <span class="c"># prints the number of values for each column</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>  <span class="c"># drop all rows that have missing values in them</span>
+
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s">&#39;Image&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span> <span class="o">/</span> <span class="mf">255.</span>  <span class="c"># scale pixel values to [0, 1]</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">test</span><span class="p">:</span>  <span class="c"># only FTRAIN has any target columns</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span> <span class="o">-</span> <span class="mi">48</span><span class="p">)</span> <span class="o">/</span> <span class="mi">48</span>  <span class="c"># scale target coordinates to [-1, 1]</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">shuffle</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>  <span class="c"># shuffle train data</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load</span><span class="p">()</span>
+<span class="k">print</span><span class="p">(</span><span class="s">&quot;X.shape == {}; X.min == {:.3f}; X.max == {:.3f}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+    <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">X</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">X</span><span class="o">.</span><span class="n">max</span><span class="p">()))</span>
+<span class="k">print</span><span class="p">(</span><span class="s">&quot;y.shape == {}; y.min == {:.3f}; y.max == {:.3f}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+    <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">y</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">y</span><span class="o">.</span><span class="n">max</span><span class="p">()))</span>
+</pre></div>
+
+
+
+<p>It's not necessary that you go through every single detail of this
+function.  But let's take a look at what the script above outputs:</p>
+
+
+<div class="pygments_murphy"><pre><span class="nv">$ </span>python kfkd.py
+left_eye_center_x            7034
+left_eye_center_y            7034
+right_eye_center_x           7032
+right_eye_center_y           7032
+left_eye_inner_corner_x      2266
+left_eye_inner_corner_y      2266
+left_eye_outer_corner_x      2263
+left_eye_outer_corner_y      2263
+right_eye_inner_corner_x     2264
+right_eye_inner_corner_y     2264
+...
+mouth_right_corner_x         2267
+mouth_right_corner_y         2267
+mouth_center_top_lip_x       2272
+mouth_center_top_lip_y       2272
+mouth_center_bottom_lip_x    7014
+mouth_center_bottom_lip_y    7014
+Image                        7044
+dtype: int64
+X.shape <span class="o">==</span> <span class="o">(</span>2140, 9216<span class="o">)</span><span class="p">;</span> X.min <span class="o">==</span> 0.000<span class="p">;</span> X.max <span class="o">==</span> 1.000
+y.shape <span class="o">==</span> <span class="o">(</span>2140, 30<span class="o">)</span><span class="p">;</span> y.min <span class="o">==</span> -0.920<span class="p">;</span> y.max <span class="o">==</span> 0.996
+</pre></div>
+
+
+
+<p>First it's printing a list of all columns in the CSV file along with
+the number of available values for each.  So while we have an
+<tt class="docutils literal">Image</tt> for all rows in the training data, we only have 2,267 values
+for <tt class="docutils literal">mouth_right_corner_x</tt> and so on.</p>
+<p><tt class="docutils literal">load()</tt> returns a tuple <em>(X, y)</em> where <em>y</em> is the target matrix.
+<em>y</em> has shape <em>n x m</em> with <em>n</em> being the number of samples in the
+dataset that have all <em>m</em> keypoints.  Dropping all rows with missing
+values is what this line does:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>  <span class="c"># drop all rows that have missing values in them</span>
+</pre></div>
+
+
+
+<p>The script's output <tt class="docutils literal">y.shape == (2140, 30)</tt> tells us that there's
+only 2,140 images in the dataset that have all 30 target values
+present.  Initially, we'll train with these 2,140 samples only.  Which
+leaves us with many more input dimensions (9,216) than samples; an
+indicator that overfitting might become a problem.  Let's see.  Of
+course it's a bad idea to throw away 70% of the training data just
+like that, and we'll talk about this later on.</p>
+<p>Another feature of the <tt class="docutils literal">load()</tt> function is that it scales the
+intensity values of the image pixels to be in the interval [0, 1],
+instead of 0 to 255.  The target values (x and y coordinates) are
+scaled to <em>[-1, 1]</em>; before they were between 0 to 95.</p>
+</div>
+<div class="section" id="first-model-a-single-hidden-layer">
+<h3><a class="toc-backref" href="#id3">First model: a single hidden layer</a></h3>
+<p>Now that we're done with the legwork of loading the data, let's use
+Lasagne and create a neural net with a single hidden layer.  We'll
+start with the code:</p>
+
+
+<div class="pygments_murphy"><pre><span class="c"># add to kfkd.py</span>
+<span class="kn">from</span> <span class="nn">lasagne</span> <span class="kn">import</span> <span class="n">layers</span>
+<span class="kn">from</span> <span class="nn">lasagne.updates</span> <span class="kn">import</span> <span class="n">nesterov_momentum</span>
+<span class="kn">from</span> <span class="nn">nolearn.lasagne</span> <span class="kn">import</span> <span class="n">NeuralNet</span>
+
+<span class="n">net1</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span>  <span class="c"># three layers: one hidden layer</span>
+        <span class="p">(</span><span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;hidden&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;output&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="c"># layer parameters:</span>
+    <span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">9216</span><span class="p">),</span>  <span class="c"># 96x96 input pixels per batch</span>
+    <span class="n">hidden_num_units</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>  <span class="c"># number of units in hidden layer</span>
+    <span class="n">output_nonlinearity</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>  <span class="c"># output layer uses identity function</span>
+    <span class="n">output_num_units</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>  <span class="c"># 30 target values</span>
+
+    <span class="c"># optimization method:</span>
+    <span class="n">update</span><span class="o">=</span><span class="n">nesterov_momentum</span><span class="p">,</span>
+    <span class="n">update_learning_rate</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">update_momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+
+    <span class="n">regression</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>  <span class="c"># flag to indicate we&#39;re dealing with regression problem</span>
+    <span class="n">max_epochs</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>  <span class="c"># we want to train this many epochs</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load</span><span class="p">()</span>
+<span class="n">net1</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>We use quite a few parameters to initialize the <tt class="docutils literal">NeuralNet</tt>.  Let's
+walk through them.  First there's the three layers and their
+parameters:</p>
+
+
+<div class="pygments_murphy"><pre>    <span class="n">layers</span><span class="o">=</span><span class="p">[</span>  <span class="c"># three layers: one hidden layer</span>
+        <span class="p">(</span><span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;hidden&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;output&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="c"># layer parameters:</span>
+    <span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">9216</span><span class="p">),</span>  <span class="c"># 96x96 input pixels per batch</span>
+    <span class="n">hidden_num_units</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>  <span class="c"># number of units in hidden layer</span>
+    <span class="n">output_nonlinearity</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>  <span class="c"># output layer uses identity function</span>
+    <span class="n">output_num_units</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>  <span class="c"># 30 target values</span>
+</pre></div>
+
+
+
+<p>Here we define the <tt class="docutils literal">input</tt> layer, the <tt class="docutils literal">hidden</tt> layer and the
+<tt class="docutils literal">output</tt> layer.  In parameter <tt class="docutils literal">layers</tt>, we name and specify the
+type of each layer, and their order.  Parameters <tt class="docutils literal">input_shape</tt>,
+<tt class="docutils literal">hidden_num_units</tt>, <tt class="docutils literal">output_nonlinearity</tt>, and
+<tt class="docutils literal">output_num_units</tt> are each parameters for specific layers; they
+refer to the layer by their prefix, such that <tt class="docutils literal">input_shape</tt> defines
+the <tt class="docutils literal">shape</tt> parameter of the <tt class="docutils literal">input</tt> layer, <tt class="docutils literal">hidden_num_units</tt>
+defines the hidden layer's <tt class="docutils literal">num_units</tt> and so on.  (It may seem a
+little odd that we have to specify the parameters like this, but the
+upshot is it buys us better compatibility with <a class="reference external" href="http://scikit-learn.org/">scikit-learn</a>'s pipeline and parameter search
+features.)</p>
+<p>We set the first dimension of <tt class="docutils literal">input_shape</tt> to <tt class="docutils literal">None</tt>.  This
+translates to a <em>variable batch size</em>.</p>
+<p>We set the <tt class="docutils literal">output_nonlinearity</tt> to <tt class="docutils literal">None</tt> explicitly.  Thus, the
+output units' activations become just a linear combination of the
+activations in the hidden layer.</p>
+<p>The default nonlinearity used by <tt class="docutils literal">DenseLayer</tt> is the <em>rectifier</em>,
+which is simply <tt class="docutils literal">max(0, x)</tt>.  It's the most popular choice of
+activation function these days.  By not explicitly setting
+<tt class="docutils literal">hidden_nonlinearity</tt>, we're choosing the rectifier as the
+activiation function of our hidden layer.</p>
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/rectifier.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/rectifier.png" />
+</div>
+<p>The neural net's weights are initialized from a uniform distribution
+with a cleverly chosen interval.  That is, Lasagne figures out this
+interval for us, using <a class="reference external" href="http://jmlr.org/proceedings/papers/v9/glorot10a/glorot10a.pdf">&quot;Glorot-style&quot; initialization</a>.</p>
+<p>There's a few more parameters.  All parameters starting with
+<tt class="docutils literal">update</tt> parametrize the update function, or optimization method.
+The update function will update the weights of our network after each
+batch.  We'll use the <tt class="docutils literal">nesterov_momentum</tt> gradient descent
+optimization method to do the job.  There's a number of other methods
+that Lasagne implements, such as <tt class="docutils literal">adagrad</tt> and <tt class="docutils literal">rmsprop</tt>.  We
+choose <tt class="docutils literal">nesterov_momentum</tt> because it has proven to work very well
+for a large number of problems.</p>
+
+
+<div class="pygments_murphy"><pre>    <span class="c"># optimization method:</span>
+    <span class="n">update</span><span class="o">=</span><span class="n">nesterov_momentum</span><span class="p">,</span>
+    <span class="n">update_learning_rate</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">update_momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+</pre></div>
+
+
+
+<p>The <tt class="docutils literal">update_learning_rate</tt> defines how large we want the steps of
+the gradient descent updates to be.  We'll talk a bit more about the
+<tt class="docutils literal">learning_rate</tt> and <tt class="docutils literal">momentum</tt> parameters later on.  For now, it's
+enough to just use these &quot;sane defaults.&quot;</p>
+<div class="figure">
+<img alt="http://i.imgur.com/s25RsOr.gif" class="img-responsive" src="http://i.imgur.com/s25RsOr.gif" />
+<p class="caption">Comparison of a few optimization methods (animation by <a class="reference external" href="http://www.reddit.com/r/MachineLearning/comments/2gopfa/visualizing_gradient_optimization_techniques/cklhott">Alec
+Radford</a>).
+The star denotes the global minimum on the error surface.  Notice
+that stochastic gradient descent (SGD) without momentum is the
+slowest method to converge in this example.  We're using Nesterov's
+Accelerated Gradient Descent (NAG) throughout this tutorial.</p>
+</div>
+<p>In our definition of <tt class="docutils literal">NeuralNet</tt> we didn't specify an objective
+function to minimize.  There's again a default for that; for
+regression problems it's the mean squared error (MSE).</p>
+<p>The last set of parameters declare that we're dealing with a
+<tt class="docutils literal">regression</tt> problem (as opposed to classification), that 400 is the
+number of epochs we're willing to train, and that we want to print out
+information during training by setting <tt class="docutils literal">verbose=1</tt>:</p>
+
+
+<div class="pygments_murphy"><pre>  <span class="n">regression</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>  <span class="c"># flag to indicate we&#39;re dealing with regression problem</span>
+  <span class="n">max_epochs</span><span class="o">=</span><span class="mi">400</span><span class="p">,</span>  <span class="c"># we want to train this many epochs</span>
+  <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+</pre></div>
+
+
+
+<p>Finally, the last two lines in our script load the data, just as
+before, and then train the neural net with it:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load</span><span class="p">()</span>
+<span class="n">net1</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>Running these two lines will output a table that grows one row per
+training epoch.  In each row, we'll see the current loss (MSE) on the
+train set and on the validation set and the ratio between the two.
+<tt class="docutils literal">NeuralNet</tt> automatically splits the data provided in <tt class="docutils literal">X</tt> into a
+training and a validation set, using 20% of the samples for
+validation.  (You can adjust this ratio by overriding the
+<tt class="docutils literal">eval_size=0.2</tt> parameter.)</p>
+
+
+<div class="pygments_murphy"><pre><span class="nv">$ </span>python kfkd.py
+...
+  InputLayer          <span class="o">(</span>None, 9216<span class="o">)</span>            produces    <span class="m">9216</span> outputs
+  DenseLayer          <span class="o">(</span>None, 100<span class="o">)</span>             produces     <span class="m">100</span> outputs
+  DenseLayer          <span class="o">(</span>None, 30<span class="o">)</span>              produces      <span class="m">30</span> outputs
+
+ Epoch  <span class="p">|</span>  Train loss  <span class="p">|</span>  Valid loss  <span class="p">|</span>  Train / Val
+--------<span class="p">|</span>--------------<span class="p">|</span>--------------<span class="p">|</span>----------------
+     <span class="m">1</span>  <span class="p">|</span>    0.105418  <span class="p">|</span>    0.031085  <span class="p">|</span>     3.391261
+     <span class="m">2</span>  <span class="p">|</span>    0.020353  <span class="p">|</span>    0.019294  <span class="p">|</span>     1.054894
+     <span class="m">3</span>  <span class="p">|</span>    0.016118  <span class="p">|</span>    0.016918  <span class="p">|</span>     0.952734
+     <span class="m">4</span>  <span class="p">|</span>    0.014187  <span class="p">|</span>    0.015550  <span class="p">|</span>     0.912363
+     <span class="m">5</span>  <span class="p">|</span>    0.013329  <span class="p">|</span>    0.014791  <span class="p">|</span>     0.901199
+...
+   <span class="m">200</span>  <span class="p">|</span>    0.003250  <span class="p">|</span>    0.004150  <span class="p">|</span>     0.783282
+   <span class="m">201</span>  <span class="p">|</span>    0.003242  <span class="p">|</span>    0.004141  <span class="p">|</span>     0.782850
+   <span class="m">202</span>  <span class="p">|</span>    0.003234  <span class="p">|</span>    0.004133  <span class="p">|</span>     0.782305
+   <span class="m">203</span>  <span class="p">|</span>    0.003225  <span class="p">|</span>    0.004126  <span class="p">|</span>     0.781746
+   <span class="m">204</span>  <span class="p">|</span>    0.003217  <span class="p">|</span>    0.004118  <span class="p">|</span>     0.781239
+   <span class="m">205</span>  <span class="p">|</span>    0.003209  <span class="p">|</span>    0.004110  <span class="p">|</span>     0.780738
+...
+   <span class="m">395</span>  <span class="p">|</span>    0.002259  <span class="p">|</span>    0.003269  <span class="p">|</span>     0.690925
+   <span class="m">396</span>  <span class="p">|</span>    0.002256  <span class="p">|</span>    0.003264  <span class="p">|</span>     0.691164
+   <span class="m">397</span>  <span class="p">|</span>    0.002254  <span class="p">|</span>    0.003264  <span class="p">|</span>     0.690485
+   <span class="m">398</span>  <span class="p">|</span>    0.002249  <span class="p">|</span>    0.003259  <span class="p">|</span>     0.690303
+   <span class="m">399</span>  <span class="p">|</span>    0.002247  <span class="p">|</span>    0.003260  <span class="p">|</span>     0.689252
+   <span class="m">400</span>  <span class="p">|</span>    0.002244  <span class="p">|</span>    0.003255  <span class="p">|</span>     0.689606
+</pre></div>
+
+
+
+<p>On a reasonably fast GPU, we're able to train for 400 epochs in under
+a minute.  Notice that the validation loss keeps improving until the
+end.  (If you let it train longer, it will improve a little more.)</p>
+<p>Now how good is a validation loss of 0.0032?  How does it compare to
+the <a class="reference external" href="https://www.kaggle.com/c/facial-keypoints-detection/details/getting-started-with-r">challenge's benchmark</a>
+or the other entries in the leaderboard?  Remember that we divided the
+target coordinates by 48 when we scaled them to be in the interval
+<em>[-1, 1]</em>.  Thus, to calculate the root-mean-square error, as that's
+what's used in the challenge's leaderboard, based on our MSE loss of
+0.003255, we'll take the square root and multiply by 48 again:</p>
+
+
+<div class="pygments_murphy"><pre><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.003255</span><span class="p">)</span> <span class="o">*</span> <span class="mi">48</span>
+<span class="mf">2.7385251505144153</span>
+</pre></div>
+
+
+
+<p>This is reasonable proxy for what our score would be on the Kaggle
+leaderboard; at the same time it's assuming that the subset of the
+data that we chose to train with follows the same distribution as the
+test set, which isn't really the case.  My guess is that the score is
+good enough to earn us a top ten place in the leaderboard at the time
+of writing.  Certainly not a bad start!  (And for those of you that
+are crying out right now because of the lack of a proper test set:
+don't.)</p>
+</div>
+<div class="section" id="testing-it-out">
+<h3><a class="toc-backref" href="#id4">Testing it out</a></h3>
+<p>The <tt class="docutils literal">net1</tt> object actually keeps a record of the data that it prints
+out in the table.  We can access that record through the
+<tt class="docutils literal">train_history_</tt> attribute.  Let's draw those two curves:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">train_loss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span><span class="p">[</span><span class="s">&quot;train_loss&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">net1</span><span class="o">.</span><span class="n">train_history_</span><span class="p">])</span>
+<span class="n">valid_loss</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span><span class="p">[</span><span class="s">&quot;valid_loss&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">net1</span><span class="o">.</span><span class="n">train_history_</span><span class="p">])</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">train_loss</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;train&quot;</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">valid_loss</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s">&quot;valid&quot;</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">grid</span><span class="p">()</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s">&quot;epoch&quot;</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s">&quot;loss&quot;</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">ylim</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-2</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">yscale</span><span class="p">(</span><span class="s">&quot;log&quot;</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+
+
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/lc1.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/lc1.png" />
+</div>
+<p>We can see that our net overfits, but it's not that bad.  In
+particular, we don't see a point where the validation error gets worse
+again, thus it doesn't appear that <em>early stopping</em>, a technique
+that's commonly used to avoid overfitting, would be very useful at
+this point.  Notice that we didn't use any regularization whatsoever,
+apart from choosing a small number of neurons in the hidden layer, a
+setting that will keep overfitting somewhat in control.</p>
+<p>How do the net's predictions look like, then?  Let's pick a few
+examples from the test set and check:</p>
+
+
+<div class="pygments_murphy"><pre><span class="k">def</span> <span class="nf">plot_sample</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">axis</span><span class="p">):</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">96</span><span class="p">,</span> <span class="mi">96</span><span class="p">)</span>
+    <span class="n">axis</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s">&#39;gray&#39;</span><span class="p">)</span>
+    <span class="n">axis</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">48</span> <span class="o">+</span> <span class="mi">48</span><span class="p">,</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="mi">48</span> <span class="o">+</span> <span class="mi">48</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s">&#39;x&#39;</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="n">net1</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pyplot</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">subplots_adjust</span><span class="p">(</span>
+    <span class="n">left</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">right</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">bottom</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">top</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">hspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span> <span class="n">wspace</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">16</span><span class="p">):</span>
+    <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[],</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[])</span>
+    <span class="n">plot_sample</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">y_pred</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ax</span><span class="p">)</span>
+
+<span class="n">pyplot</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+
+
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/samples1.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/samples1.png" />
+<p class="caption">Our first model's predictions on 16 samples taken from the test
+set.</p>
+</div>
+<p>The predictions look reasonable, but sometimes they are quite a bit
+off.  Let's try and do a bit better.</p>
+</div>
+<div class="section" id="second-model-convolutions">
+<h3><a class="toc-backref" href="#id5">Second model: convolutions</a></h3>
+<div class="figure">
+<img alt="http://deeplearning.stanford.edu/wiki/images/6/6c/Convolution_schematic.gif" class="img-responsive" src="http://deeplearning.stanford.edu/wiki/images/6/6c/Convolution_schematic.gif" />
+<p class="caption">The convolution operation.  (Animation taken from the <a class="reference external" href="http://deeplearning.stanford.edu/tutorial/">Stanford
+deep learning tutorial</a>.)</p>
+</div>
+<p><a class="reference external" href="http://yann.lecun.com/exdb/lenet/">LeNet5</a>-style convolutional
+neural nets are at the heart of deep learning's recent breakthrough in
+computer vision.  Convolutional layers are different to fully
+connected layers; they use a few tricks to reduce the number of
+parameters that need to be learned, while retaining high
+expressiveness.  These are:</p>
+<ul class="simple">
+<li><em>local connectivity</em>: neurons are connected only to a subset of
+neurons in the previous layer,</li>
+<li><em>weight sharing</em>: weights are shared between a subset of neurons in
+the convolutional layer (these neurons form what's called a <em>feature
+map</em>),</li>
+<li><em>pooling</em>: static subsampling of inputs.</li>
+</ul>
+<div class="figure">
+<img alt="http://deeplearning.net/tutorial/_images/conv_1D_nn.png" class="img-responsive" src="http://deeplearning.net/tutorial/_images/conv_1D_nn.png" />
+<p class="caption">Illustration of local connectivity and weight sharing.  (Taken from
+the <a class="reference external" href="http://deeplearning.net/tutorial/lenet.html">deeplearning.net tutorial</a>.)</p>
+</div>
+<p>Units in a convolutional layer actually connect to a 2-d patch of
+neurons in the previous layer, a prior that lets them exploit the 2-d
+structure in the input.</p>
+<p>When using convolutional layers in Lasagne, we have to prepare the
+input data such that each sample is no longer a flat vector of 9,216
+pixel intensities, but a three-dimensional matrix with shape <em>(c, 0,
+1)</em>, where c is the number of channels (colors), and 0 and 1
+correspond to the x and y dimensions of the input image.  In our case,
+the concrete shape will be <em>(1, 96, 96)</em>, because we're dealing with a
+single (gray) color channel only.</p>
+<p>A function <tt class="docutils literal">load2d</tt> that wraps the previously written <tt class="docutils literal">load</tt> and
+does the necessary transformations is easily coded:</p>
+
+
+<div class="pygments_murphy"><pre><span class="k">def</span> <span class="nf">load2d</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="n">test</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">96</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+</pre></div>
+
+
+
+<p>We'll build a convolutional neural net with three convolutional layers
+and two fully connected layers.  Each conv layer is followed by a 2x2
+max-pooling layer.  Starting with 32 filters, we double the number of
+filters with every conv layer.  The densely connected hidden layers
+both have 500 units.</p>
+<p>There's again no regularization in the form of weight decay or
+dropout.  It turns out that using very small convolutional filters,
+such as our 3x3 and 2x2 filters, is again a pretty good regularizer by
+itself.</p>
+<p>Let's write down the code:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net2</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">(</span><span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;conv1&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;pool1&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;conv2&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;pool2&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;conv3&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;pool3&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;hidden4&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;hidden5&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;output&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">96</span><span class="p">),</span>
+    <span class="n">conv1_num_filters</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">conv1_filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">pool1_pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="n">conv2_num_filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">conv2_filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">pool2_pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="n">conv3_num_filters</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">conv3_filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">pool3_pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="n">hidden4_num_units</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">hidden5_num_units</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">output_num_units</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+
+    <span class="n">update_learning_rate</span><span class="o">=</span><span class="mf">0.01</span><span class="p">,</span>
+    <span class="n">update_momentum</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span>
+
+    <span class="n">regression</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">max_epochs</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load2d</span><span class="p">()</span>  <span class="c"># load 2-d data</span>
+<span class="n">net2</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="c"># Training for 1000 epochs will take a while.  We&#39;ll pickle the</span>
+<span class="c"># trained model so that we can load it back later:</span>
+<span class="kn">import</span> <span class="nn">cPickle</span> <span class="kn">as</span> <span class="nn">pickle</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;net2.pickle&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">net2</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>Training this neural net is much more computationally costly than the
+first one we trained.  It takes around 15x as long to train; those
+1000 epochs take more than 20 minutes on even a powerful GPU.</p>
+<p>However, our patience is rewarded with what's already a much better
+model than the one we had before.  Let's take a look at the output
+when running the script.  First comes the list of layers with their
+output shapes.  Note that the first conv layer produces 32 output
+images of size <em>(94, 94)</em>, that's one 94x94 output image per filter:</p>
+
+
+<div class="pygments_murphy"><pre>InputLayer            (None, 1, 96, 96)       produces    9216 outputs
+Conv2DCCLayer         (None, 32, 94, 94)      produces  282752 outputs
+MaxPool2DCCLayer      (None, 32, 47, 47)      produces   70688 outputs
+Conv2DCCLayer         (None, 64, 46, 46)      produces  135424 outputs
+MaxPool2DCCLayer      (None, 64, 23, 23)      produces   33856 outputs
+Conv2DCCLayer         (None, 128, 22, 22)     produces   61952 outputs
+MaxPool2DCCLayer      (None, 128, 11, 11)     produces   15488 outputs
+DenseLayer            (None, 500)             produces     500 outputs
+DenseLayer            (None, 500)             produces     500 outputs
+DenseLayer            (None, 30)              produces      30 outputs
+</pre></div>
+
+
+
+<p>What follows is the same table that we saw with the first example,
+with train and validation error over time:</p>
+
+
+<div class="pygments_murphy"><pre> Epoch  |  Train loss  |  Valid loss  |  Train / Val
+--------|--------------|--------------|----------------
+     1  |    0.111763  |    0.042740  |     2.614934
+     2  |    0.018500  |    0.009413  |     1.965295
+     3  |    0.008598  |    0.007918  |     1.085823
+     4  |    0.007292  |    0.007284  |     1.001139
+     5  |    0.006783  |    0.006841  |     0.991525
+...
+   500  |    0.001791  |    0.002013  |     0.889810
+   501  |    0.001789  |    0.002011  |     0.889433
+   502  |    0.001786  |    0.002009  |     0.889044
+   503  |    0.001783  |    0.002007  |     0.888534
+   504  |    0.001780  |    0.002004  |     0.888095
+   505  |    0.001777  |    0.002002  |     0.887699
+...
+   995  |    0.001083  |    0.001568  |     0.690497
+   996  |    0.001082  |    0.001567  |     0.690216
+   997  |    0.001081  |    0.001567  |     0.689867
+   998  |    0.001080  |    0.001567  |     0.689595
+   999  |    0.001080  |    0.001567  |     0.689089
+  1000  |    0.001079  |    0.001566  |     0.688874
+</pre></div>
+
+
+
+<p>Quite a nice improvement over the first network.  Our RMSE is looking
+pretty good, too:</p>
+
+
+<div class="pygments_murphy"><pre><span class="o">&gt;&gt;&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">0.001566</span><span class="p">)</span> <span class="o">*</span> <span class="mi">48</span>
+<span class="mf">1.8994904579913006</span>
+</pre></div>
+
+
+
+<p>We can compare the predictions of the two networks using one of the
+more problematic samples in the test set:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">sample1</span> <span class="o">=</span> <span class="n">load</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="bp">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">6</span><span class="p">:</span><span class="mi">7</span><span class="p">]</span>
+<span class="n">sample2</span> <span class="o">=</span> <span class="n">load2d</span><span class="p">(</span><span class="n">test</span><span class="o">=</span><span class="bp">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">6</span><span class="p">:</span><span class="mi">7</span><span class="p">]</span>
+<span class="n">y_pred1</span> <span class="o">=</span> <span class="n">net1</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">sample1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">y_pred2</span> <span class="o">=</span> <span class="n">net2</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">sample2</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pyplot</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[],</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[])</span>
+<span class="n">plot_sample</span><span class="p">(</span><span class="n">sample1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y_pred1</span><span class="p">,</span> <span class="n">ax</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[],</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[])</span>
+<span class="n">plot_sample</span><span class="p">(</span><span class="n">sample1</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">y_pred2</span><span class="p">,</span> <span class="n">ax</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+
+
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/samples2.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/samples2.png" />
+<p class="caption">The predictions of net1 on the left compared to the predictions of
+net2.</p>
+</div>
+<p>And then let's compare the learning curves of the first and the second
+network:</p>
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/lc2.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/lc2.png" />
+</div>
+<p>This looks pretty good, I like the smoothness of the new error curves.
+But we do notice that towards the end, the validation error of net2
+flattens out much more quickly than the training error.  I bet we
+could improve that by using more training examples.  What if we
+flipped the input images horizontically; would we be able to improve
+training by doubling the amount of training data this way?</p>
+</div>
+<div class="section" id="data-augmentation">
+<h3><a class="toc-backref" href="#id6">Data augmentation</a></h3>
+<p>An overfitting net can generally be made to perform better by using
+more training data.  (And if your unregularized net does not overfit,
+you should probably make it larger.)</p>
+<p>Data augmentation lets us artificially increase the number of training
+examples by applying transformations, adding noise etc.  That's
+obviously more economic than having to go out and collect more
+examples by hand.  Augmentation is a very useful tool to have in your
+deep learning toolbox.</p>
+<p>We mentioned batch iterators already briefly.  It is the batch
+iterator's job to take a matrix of samples, and split it up in
+batches, in our case of size 128.  While it does the splitting, the
+batch iterator can also apply transformations to the data on the fly.
+So to produce those horizontal flips, we don't actually have to double
+the amount of training data in the input matrix.  Rather, we will just
+perform the horizontal flips with 50% chance <strong>while</strong> we're iterating
+over the data.  This is convenient, and for some problems it allows us
+to produce an infinite number of examples, without blowing up the
+memory usage.  Also, transformations to the input images can be done
+while the GPU is busy processing a previous batch, so they come at
+virtually no cost.</p>
+<p>Flipping the images horizontically is just a matter of using slicing:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load2d</span><span class="p">()</span>
+<span class="n">X_flipped</span> <span class="o">=</span> <span class="n">X</span><span class="p">[:,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>  <span class="c"># simple slice to flip all images</span>
+
+<span class="c"># plot two images:</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pyplot</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[],</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[])</span>
+<span class="n">plot_sample</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[],</span> <span class="n">yticks</span><span class="o">=</span><span class="p">[])</span>
+<span class="n">plot_sample</span><span class="p">(</span><span class="n">X_flipped</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ax</span><span class="p">)</span>
+<span class="n">pyplot</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+
+
+
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/samples3.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/samples3.png" />
+<p class="caption">Left shows the original image, right is the flipped image.</p>
+</div>
+<p>In the picture on the right, notice that the target value keypoints
+aren't aligned with the image anymore.  Since we're flipping the
+images, we'll have to make sure we also flip the target values.  To do
+this, not only do we have to flip the coordinates, we'll also have to
+swap target value positions; that's because the flipped
+<tt class="docutils literal">left_eye_center_x</tt> no longer points to the left eye in our flipped
+image; now it corresponds to <tt class="docutils literal">right_eye_center_x</tt>.  Some points like
+<tt class="docutils literal">nose_tip_y</tt> are not affected.  We'll define a tuple
+<tt class="docutils literal">flip_indices</tt> that holds the information about which columns in the
+target vector need to swap places when we flip the image
+horizontically.  Remember the list of columns was:</p>
+
+
+<div class="pygments_murphy"><pre>left_eye_center_x            7034
+left_eye_center_y            7034
+right_eye_center_x           7032
+right_eye_center_y           7032
+left_eye_inner_corner_x      2266
+left_eye_inner_corner_y      2266
+...
+</pre></div>
+
+
+
+<p>Since <tt class="docutils literal">left_eye_center_x</tt> will need to swap places with
+<tt class="docutils literal">right_eye_center_x</tt>, we write down the tuple <tt class="docutils literal">(0, 2)</tt>.  Also
+<tt class="docutils literal">left_eye_center_y</tt> needs to swap places: with
+<tt class="docutils literal">right_eye_center_y</tt>.  Thus we write down <tt class="docutils literal">(1, 3)</tt>, and so on.  In
+the end, we have:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">flip_indices</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">17</span><span class="p">),</span> <span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">18</span><span class="p">),</span> <span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">19</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">22</span><span class="p">,</span> <span class="mi">24</span><span class="p">),</span> <span class="p">(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span>
+    <span class="p">]</span>
+
+<span class="c"># Let&#39;s see if we got it right:</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="n">FTRAIN</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">flip_indices</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">&quot;# {} -&gt; {}&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="n">j</span><span class="p">]))</span>
+
+<span class="c"># this prints out:</span>
+<span class="c"># left_eye_center_x -&gt; right_eye_center_x</span>
+<span class="c"># left_eye_center_y -&gt; right_eye_center_y</span>
+<span class="c"># left_eye_inner_corner_x -&gt; right_eye_inner_corner_x</span>
+<span class="c"># left_eye_inner_corner_y -&gt; right_eye_inner_corner_y</span>
+<span class="c"># left_eye_outer_corner_x -&gt; right_eye_outer_corner_x</span>
+<span class="c"># left_eye_outer_corner_y -&gt; right_eye_outer_corner_y</span>
+<span class="c"># left_eyebrow_inner_end_x -&gt; right_eyebrow_inner_end_x</span>
+<span class="c"># left_eyebrow_inner_end_y -&gt; right_eyebrow_inner_end_y</span>
+<span class="c"># left_eyebrow_outer_end_x -&gt; right_eyebrow_outer_end_x</span>
+<span class="c"># left_eyebrow_outer_end_y -&gt; right_eyebrow_outer_end_y</span>
+<span class="c"># mouth_left_corner_x -&gt; mouth_right_corner_x</span>
+<span class="c"># mouth_left_corner_y -&gt; mouth_right_corner_y</span>
+</pre></div>
+
+
+
+<p>Our batch iterator implementation will derive from the default
+<tt class="docutils literal">BatchIterator</tt> class and override the <tt class="docutils literal">transform()</tt> method only.
+Let's see how it looks like when we put it all together:</p>
+
+
+<div class="pygments_murphy"><pre><span class="kn">from</span> <span class="nn">nolearn.lasagne</span> <span class="kn">import</span> <span class="n">BatchIterator</span>
+
+<span class="k">class</span> <span class="nc">FlipBatchIterator</span><span class="p">(</span><span class="n">BatchIterator</span><span class="p">):</span>
+    <span class="n">flip_indices</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span>
+        <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span> <span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">11</span><span class="p">),</span>
+        <span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">16</span><span class="p">),</span> <span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">17</span><span class="p">),</span> <span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">18</span><span class="p">),</span> <span class="p">(</span><span class="mi">15</span><span class="p">,</span> <span class="mi">19</span><span class="p">),</span>
+        <span class="p">(</span><span class="mi">22</span><span class="p">,</span> <span class="mi">24</span><span class="p">),</span> <span class="p">(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span>
+        <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Xb</span><span class="p">,</span> <span class="n">yb</span><span class="p">):</span>
+        <span class="n">Xb</span><span class="p">,</span> <span class="n">yb</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">FlipBatchIterator</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">Xb</span><span class="p">,</span> <span class="n">yb</span><span class="p">)</span>
+
+        <span class="c"># Flip half of the images in this batch at random:</span>
+        <span class="n">bs</span> <span class="o">=</span> <span class="n">Xb</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">bs</span><span class="p">,</span> <span class="n">bs</span> <span class="o">/</span> <span class="mi">2</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+        <span class="n">Xb</span><span class="p">[</span><span class="n">indices</span><span class="p">]</span> <span class="o">=</span> <span class="n">Xb</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:,</span> <span class="p">::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">yb</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="c"># Horizontal flip of all x coordinates:</span>
+            <span class="n">yb</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">yb</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="p">::</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="o">-</span><span class="mi">1</span>
+
+            <span class="c"># Swap places, e.g. left_eye_center_x -&gt; right_eye_center_x</span>
+            <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">flip_indices</span><span class="p">:</span>
+                <span class="n">yb</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="n">a</span><span class="p">],</span> <span class="n">yb</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">yb</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="n">b</span><span class="p">],</span> <span class="n">yb</span><span class="p">[</span><span class="n">indices</span><span class="p">,</span> <span class="n">a</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">Xb</span><span class="p">,</span> <span class="n">yb</span>
+</pre></div>
+
+
+
+<p>To use this batch iterator for training, we'll pass it as the
+<tt class="docutils literal">batch_iterator_train</tt> argument to <tt class="docutils literal">NeuralNet</tt>.  Let's define
+<tt class="docutils literal">net3</tt>, a network that looks exactly the same as <tt class="docutils literal">net2</tt> except for
+these lines at the very end:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net3</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="c"># ...</span>
+    <span class="n">regression</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">batch_iterator_train</span><span class="o">=</span><span class="n">FlipBatchIterator</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">),</span>
+    <span class="n">max_epochs</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+
+<p>Now we're passing our <tt class="docutils literal">FlipBatchIterator</tt>, but we've also tripled
+the number of epochs to train.  While each one of our training epochs
+will still look at the same number of examples as before (after all,
+we haven't changed the size of <tt class="docutils literal">X</tt>), it turns out that training
+nevertheless takes quite a bit longer when we use our transforming
+<tt class="docutils literal">FlipBatchIterator</tt>.  This is because what the network learns
+generalizes better this time, and it's arguably harder to learn things
+that generalize than to overfit.</p>
+<p>So this will take maybe take an hour to train.  Let's make sure we
+pickle the model at the end of training, and then we're ready to go
+fetch some tea and biscuits.  Or maybe do the laundry:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net3</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">cPickle</span> <span class="kn">as</span> <span class="nn">pickle</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;net3.pickle&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">net3</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+
+
+
+<div class="pygments_murphy"><pre><span class="nv">$ </span>python kfkd.py
+...
+ Epoch  <span class="p">|</span>  Train loss  <span class="p">|</span>  Valid loss  <span class="p">|</span>  Train / Val
+--------<span class="p">|</span>--------------<span class="p">|</span>--------------<span class="p">|</span>----------------
+...
+   <span class="m">500</span>  <span class="p">|</span>    0.002238  <span class="p">|</span>    0.002303  <span class="p">|</span>     0.971519
+...
+  <span class="m">1000</span>  <span class="p">|</span>    0.001365  <span class="p">|</span>    0.001623  <span class="p">|</span>     0.841110
+  <span class="m">1500</span>  <span class="p">|</span>    0.001067  <span class="p">|</span>    0.001457  <span class="p">|</span>     0.732018
+  <span class="m">2000</span>  <span class="p">|</span>    0.000895  <span class="p">|</span>    0.001369  <span class="p">|</span>     0.653721
+  <span class="m">2500</span>  <span class="p">|</span>    0.000761  <span class="p">|</span>    0.001320  <span class="p">|</span>     0.576831
+  <span class="m">3000</span>  <span class="p">|</span>    0.000678  <span class="p">|</span>    0.001288  <span class="p">|</span>     0.526410
+</pre></div>
+
+
+
+<p>Comparing the learning with that of net2, we notice that the error on
+the validation set after 3000 epochs is indeed about 5% smaller for
+the data augmented net.  We can see how net2 stops learning anything
+useful after 2000 or so epochs, and gets pretty noisy, while net3
+continues to improve its validation error throughout, though slowly.</p>
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/lc3.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/lc3.png" />
+</div>
+<p>Still seems like a lot of work for only a small gain?  We'll find out
+if it was worth it in the next secion.</p>
+</div>
+<div class="section" id="changing-learning-rate-and-momentum-over-time">
+<h3><a class="toc-backref" href="#id7">Changing learning rate and momentum over time</a></h3>
+<p>What's annoying about our last model is that it took already an hour
+to train it, and it's not exactly inspiring to have to wait for your
+experiment's results for so long.  In this section, we'll talk about a
+combination of two tricks to fix that and make the net train much
+faster again.</p>
+<p>An intuition behind starting with a higher learning rate and
+decreasing it during the course of training is this: As we start
+training, we're far away from the optimum, and we want to take big
+steps towards it and learn quickly.  But the closer we get to the
+optimum, the lighter we want to step.  It's like taking the train
+home, but when you enter your door you do it by foot, not by train.</p>
+<p><a class="reference external" href="http://techtalks.tv/talks/on-the-importance-of-initialization-and-momentum-in-deep-learning/58189/">On the importance of initialization and momentum in deep learning</a>
+is the title of a talk and a paper by Ilya Sutskever et al.  It's
+there that we learn about another useful trick to boost deep learning:
+namely increasing the optimization method's momentum parameter during
+training.</p>
+<p>Remember that in our previous model, we initialized learning rate and
+momentum with a static 0.01 and 0.9 respectively.  Let's change that
+such that the learning rate decreases linearly with the number of
+epochs, while we let the momentum increase.</p>
+<p><tt class="docutils literal">NeuralNet</tt> allows us to update parameters during training using the
+<tt class="docutils literal">on_epoch_finished</tt> hook.  We can pass a function to
+<tt class="docutils literal">on_epoch_finished</tt> and it'll be called whenever an epoch is
+finished.  However, before we can assign new values to
+<tt class="docutils literal">update_learning_rate</tt> and <tt class="docutils literal">update_momentum</tt> on the fly, we'll
+have to change these two parameters to become Theano <em>shared
+variables</em>.  Thankfully, that's pretty easy:</p>
+
+
+<div class="pygments_murphy"><pre><span class="kn">import</span> <span class="nn">theano</span>
+
+<span class="k">def</span> <span class="nf">float32</span><span class="p">(</span><span class="n">k</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">cast</span><span class="p">[</span><span class="s">&#39;float32&#39;</span><span class="p">](</span><span class="n">k</span><span class="p">)</span>
+
+<span class="n">net4</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="c"># ...</span>
+    <span class="n">update_learning_rate</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.03</span><span class="p">)),</span>
+    <span class="n">update_momentum</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.9</span><span class="p">)),</span>
+    <span class="c"># ...</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+
+<p>The callback or list of callbacks that we pass will be called with two
+arguments: <tt class="docutils literal">nn</tt>, which is the <tt class="docutils literal">NeuralNet</tt> instance itself, and
+<tt class="docutils literal">train_history</tt>, which is the same as <tt class="docutils literal">nn.train_history_</tt>.</p>
+<p>Instead of working with callback functions that use hard-coded values,
+we'll use a parametrizable class with a <tt class="docutils literal">__call__</tt> method as our
+callback.  Let's call this class <tt class="docutils literal">AdjustVariable</tt>.  The
+implementation is reasonably straight-forward:</p>
+
+
+<div class="pygments_murphy"><pre><span class="k">class</span> <span class="nc">AdjustVariable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">0.001</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span> <span class="o">=</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ls</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nn</span><span class="p">,</span> <span class="n">train_history</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">ls</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ls</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">stop</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">max_epochs</span><span class="p">)</span>
+
+        <span class="n">epoch</span> <span class="o">=</span> <span class="n">train_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s">&#39;epoch&#39;</span><span class="p">]</span>
+        <span class="n">new_value</span> <span class="o">=</span> <span class="n">float32</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ls</span><span class="p">[</span><span class="n">epoch</span> <span class="o">-</span> <span class="mi">1</span><span class="p">])</span>
+        <span class="nb">getattr</span><span class="p">(</span><span class="n">nn</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">new_value</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>Let's plug it all together now and then we're ready to start
+training:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net4</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="c"># ...</span>
+    <span class="n">update_learning_rate</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.03</span><span class="p">)),</span>
+    <span class="n">update_momentum</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.9</span><span class="p">)),</span>
+    <span class="c"># ...</span>
+    <span class="n">regression</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="c"># batch_iterator_train=FlipBatchIterator(batch_size=128),</span>
+    <span class="n">on_epoch_finished</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">AdjustVariable</span><span class="p">(</span><span class="s">&#39;update_learning_rate&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">),</span>
+        <span class="n">AdjustVariable</span><span class="p">(</span><span class="s">&#39;update_momentum&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">0.999</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="n">max_epochs</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load2d</span><span class="p">()</span>
+<span class="n">net4</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;net4.pickle&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">net4</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>We'll train two nets: <tt class="docutils literal">net4</tt> doesn't use our <tt class="docutils literal">FlipBatchIterator</tt>,
+<tt class="docutils literal">net5</tt> does.  Other than that, they're identical.</p>
+<p>This is the learning of <tt class="docutils literal">net4</tt>:</p>
+
+
+<div class="pygments_murphy"><pre> Epoch  |  Train loss  |  Valid loss  |  Train / Val
+--------|--------------|--------------|----------------
+    50  |    0.004216  |    0.003996  |     1.055011
+   100  |    0.003533  |    0.003382  |     1.044791
+   250  |    0.001557  |    0.001781  |     0.874249
+   500  |    0.000915  |    0.001433  |     0.638702
+   750  |    0.000653  |    0.001355  |     0.481806
+  1000  |    0.000496  |    0.001387  |     0.357917
+</pre></div>
+
+
+
+<p>Cool, training is happening much faster now!  The train error at
+epochs 500 and 1000 is half of what it used to be in <tt class="docutils literal">net2</tt>, before
+our adjustments to learning rate and momentum.  This time,
+generalization seems to stop improving after 750 or so epochs already;
+looks like there's no point in training much longer.</p>
+<p>What about <tt class="docutils literal">net5</tt> with the data augmentation switched on?</p>
+
+
+<div class="pygments_murphy"><pre> Epoch  |  Train loss  |  Valid loss  |  Train / Val
+--------|--------------|--------------|----------------
+    50  |    0.004317  |    0.004081  |     1.057609
+   100  |    0.003756  |    0.003535  |     1.062619
+   250  |    0.001765  |    0.001845  |     0.956560
+   500  |    0.001135  |    0.001437  |     0.790225
+   750  |    0.000878  |    0.001313  |     0.668903
+  1000  |    0.000705  |    0.001260  |     0.559591
+  1500  |    0.000492  |    0.001199  |     0.410526
+  2000  |    0.000373  |    0.001184  |     0.315353
+</pre></div>
+
+
+
+<p>And again we have much faster training than with <tt class="docutils literal">net3</tt>, <em>and</em>
+better results.  After 1000 epochs, we're better off than <tt class="docutils literal">net3</tt> was
+after 3000 epochs.  What's more, the model trained with data
+augmentation is now about 10% better with regard to validation error
+than the one without.</p>
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/lc4.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/lc4.png" />
+</div>
+</div>
+<div class="section" id="dropout">
+<h3><a class="toc-backref" href="#id8">Dropout</a></h3>
+<p>Introduced in 2012 in the <a class="reference external" href="http://arxiv.org/abs/1207.0580">Improving neural networks by preventing
+co-adaptation of feature detectors</a>
+paper, dropout is a popular regularization technique that works
+amazingly well.  I won't go into the details of why it works so well,
+you can <a class="reference external" href="http://neuralnetworksanddeeplearning.com/chap3.html">read about that elsewhere</a>.</p>
+<p>Like with any other regularization technique, dropout only makes sense
+if we have a network that's overfitting, which is clearly the case for
+the <tt class="docutils literal">net5</tt> network that we trained in the previous section.  It's
+important to remember to get your net to train nicely and overfit
+first, then regularize.</p>
+<p>To use dropout with Lasagne, we'll add <tt class="docutils literal">DropoutLayer</tt> layers between
+the existing layers and assign dropout probabilities to each one of
+them.  Here's the complete definition of our new net.  I've added a
+<tt class="docutils literal"># !</tt> comment at the end of those lines that were added between this
+and <tt class="docutils literal">net5</tt>.</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net6</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="n">layers</span><span class="o">=</span><span class="p">[</span>
+        <span class="p">(</span><span class="s">&#39;input&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">InputLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;conv1&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;pool1&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;dropout1&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DropoutLayer</span><span class="p">),</span>  <span class="c"># !</span>
+        <span class="p">(</span><span class="s">&#39;conv2&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;pool2&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;dropout2&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DropoutLayer</span><span class="p">),</span>  <span class="c"># !</span>
+        <span class="p">(</span><span class="s">&#39;conv3&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">Conv2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;pool3&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">MaxPool2DLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;dropout3&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DropoutLayer</span><span class="p">),</span>  <span class="c"># !</span>
+        <span class="p">(</span><span class="s">&#39;hidden4&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;dropout4&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DropoutLayer</span><span class="p">),</span>  <span class="c"># !</span>
+        <span class="p">(</span><span class="s">&#39;hidden5&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">(</span><span class="s">&#39;output&#39;</span><span class="p">,</span> <span class="n">layers</span><span class="o">.</span><span class="n">DenseLayer</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="n">input_shape</span><span class="o">=</span><span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">96</span><span class="p">,</span> <span class="mi">96</span><span class="p">),</span>
+    <span class="n">conv1_num_filters</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">conv1_filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">pool1_pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="n">dropout1_p</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span>  <span class="c"># !</span>
+    <span class="n">conv2_num_filters</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">conv2_filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">pool2_pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="n">dropout2_p</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>  <span class="c"># !</span>
+    <span class="n">conv3_num_filters</span><span class="o">=</span><span class="mi">128</span><span class="p">,</span> <span class="n">conv3_filter_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">pool3_pool_size</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="n">dropout3_p</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span>  <span class="c"># !</span>
+    <span class="n">hidden4_num_units</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">dropout4_p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>  <span class="c"># !</span>
+    <span class="n">hidden5_num_units</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span>
+    <span class="n">output_num_units</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span> <span class="n">output_nonlinearity</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+
+    <span class="n">update_learning_rate</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.03</span><span class="p">)),</span>
+    <span class="n">update_momentum</span><span class="o">=</span><span class="n">theano</span><span class="o">.</span><span class="n">shared</span><span class="p">(</span><span class="n">float32</span><span class="p">(</span><span class="mf">0.9</span><span class="p">)),</span>
+
+    <span class="n">regression</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+    <span class="n">batch_iterator_train</span><span class="o">=</span><span class="n">FlipBatchIterator</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">128</span><span class="p">),</span>
+    <span class="n">on_epoch_finished</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">AdjustVariable</span><span class="p">(</span><span class="s">&#39;update_learning_rate&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">),</span>
+        <span class="n">AdjustVariable</span><span class="p">(</span><span class="s">&#39;update_momentum&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">0.999</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="n">max_epochs</span><span class="o">=</span><span class="mi">3000</span><span class="p">,</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+
+<p>Our network is sufficiently large now to crash Python's pickle with a
+maximum recursion error.  Therefore we have to increase Python's
+recursion limit before we save it:</p>
+
+
+<div class="pygments_murphy"><pre><span class="kn">import</span> <span class="nn">sys</span>
+<span class="n">sys</span><span class="o">.</span><span class="n">setrecursionlimit</span><span class="p">(</span><span class="mi">10000</span><span class="p">)</span>
+
+<span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load2d</span><span class="p">()</span>
+<span class="n">net6</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">cPickle</span> <span class="kn">as</span> <span class="nn">pickle</span>
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;net6.pickle&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">net6</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>Taking a look at the learning, we notice that it's become slower
+again, and that's expected with dropout, but eventually it will
+outperform <tt class="docutils literal">net5</tt>:</p>
+
+
+<div class="pygments_murphy"><pre> Epoch  |  Train loss  |  Valid loss  |  Train / Val
+--------|--------------|--------------|---------------
+    50  |    0.004619  |    0.005198  |     0.888566
+   100  |    0.004369  |    0.004182  |     1.044874
+   250  |    0.003821  |    0.003577  |     1.068229
+   500  |    0.002598  |    0.002236  |     1.161854
+  1000  |    0.001902  |    0.001607  |     1.183391
+  1500  |    0.001660  |    0.001383  |     1.200238
+  2000  |    0.001496  |    0.001262  |     1.185684
+  2500  |    0.001383  |    0.001181  |     1.171006
+  3000  |    0.001306  |    0.001121  |     1.164100
+</pre></div>
+
+
+
+<p>Also overfitting doesn't seem to be nearly as bad.  Though we'll have
+to be careful with those numbers: the ratio between training and
+validation has a slightly different meaning now since the train error
+is evaluated with dropout, whereas the validation error is evaluated
+without dropout.  A more comparable value for the train error is
+this:</p>
+
+
+<div class="pygments_murphy"><pre><span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="n">mean_squared_error</span>
+<span class="k">print</span> <span class="n">mean_squared_error</span><span class="p">(</span><span class="n">net6</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="n">y</span><span class="p">)</span>
+<span class="c"># prints something like 0.0010073791</span>
+</pre></div>
+
+
+
+<p>In our previous model without dropout, the error on the train set was
+0.000373.  So not only does our dropout net perform slightly better,
+it overfits <strong>much less</strong> than what we had before.  That's great news,
+because it means that we can expect even better performance when we
+make the net larger (and more expressive).  And that's what we'll try
+next: we increase the number of units in the last two hidden layers
+from 500 to 1000.  Update these lines:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net7</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="c"># ...</span>
+    <span class="n">hidden4_num_units</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>  <span class="c"># !</span>
+    <span class="n">dropout4_p</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">hidden5_num_units</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>  <span class="c"># !</span>
+    <span class="c"># ...</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+
+<p>The improvement over the non-dropout layer is now becoming more
+substantial:</p>
+
+
+<div class="pygments_murphy"><pre> Epoch  |  Train loss  |  Valid loss  |  Train / Val
+--------|--------------|--------------|---------------
+    50  |    0.004756  |    0.007043  |     0.675330
+   100  |    0.004440  |    0.005321  |     0.834432
+   250  |    0.003974  |    0.003928  |     1.011598
+   500  |    0.002574  |    0.002347  |     1.096366
+  1000  |    0.001861  |    0.001613  |     1.153796
+  1500  |    0.001558  |    0.001372  |     1.135849
+  2000  |    0.001409  |    0.001230  |     1.144821
+  2500  |    0.001295  |    0.001146  |     1.130188
+  3000  |    0.001195  |    0.001087  |     1.099271
+</pre></div>
+
+
+
+<p>And we're still looking really good with the overfitting!  My feeling
+is that if we increase the number of epochs to train, this model might
+become even better.  Let's try it:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net12</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="c"># ...</span>
+    <span class="n">max_epochs</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+    <span class="c"># ...</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+
+
+
+<div class="pygments_murphy"><pre> Epoch  |  Train loss  |  Valid loss  |  Train / Val
+--------|--------------|--------------|---------------
+    50  |    0.004756  |    0.007027  |     0.676810
+   100  |    0.004439  |    0.005321  |     0.834323
+   500  |    0.002576  |    0.002346  |     1.097795
+  1000  |    0.001863  |    0.001614  |     1.154038
+  2000  |    0.001406  |    0.001233  |     1.140188
+  3000  |    0.001184  |    0.001074  |     1.102168
+  4000  |    0.001068  |    0.000983  |     1.086193
+  5000  |    0.000981  |    0.000920  |     1.066288
+  6000  |    0.000904  |    0.000884  |     1.021837
+  7000  |    0.000851  |    0.000849  |     1.002314
+  8000  |    0.000810  |    0.000821  |     0.985769
+  9000  |    0.000769  |    0.000803  |     0.957842
+ 10000  |    0.000760  |    0.000787  |     0.966583
+</pre></div>
+
+
+
+<p>So there you're witnessing the magic that is dropout.  :-)</p>
+<p>Let's compare the nets we trained so for and their respective train
+and validation errors:</p>
+
+
+<div class="pygments_murphy"><pre> Name  |   Description    |  Epochs  |  Train loss  |  Valid loss
+-------|------------------|----------|--------------|--------------
+ net1  |  single hidden   |     400  |    0.002244  |    0.003255
+ net2  |  convolutions    |    1000  |    0.001079  |    0.001566
+ net3  |  augmentation    |    3000  |    0.000678  |    0.001288
+ net4  |  mom + lr adj    |    1000  |    0.000496  |    0.001387
+ net5  |  net4 + augment  |    2000  |    0.000373  |    0.001184
+ net6  |  net5 + dropout  |    3000  |    0.001306  |    0.001121
+ net7  |  net6 + epochs   |   10000  |    0.000760  |    0.000787
+</pre></div>
+
+
+
+</div>
+<div class="section" id="training-specialists">
+<h3><a class="toc-backref" href="#id9">Training specialists</a></h3>
+<p>Remember those 70% of training data that we threw away in the
+beginning?  Turns out that's a very bad idea if we want to get a
+competitive score in the Kaggle leaderboard.  There's quite a bit of
+variance in those 70% of data and in the challenge's test set that our
+model hasn't seen yet.</p>
+<p>So instead of training a single model, let's train a few specialists,
+with each one predicting a different set of target values.  We'll
+train one model that only predicts <tt class="docutils literal">left_eye_center</tt> and
+<tt class="docutils literal">right_eye_center</tt>, one only for <tt class="docutils literal">nose_tip</tt> and so on; overall,
+we'll have six models.  This will allow us to use the full training
+dataset, and hopefully get a more competitive score overall.</p>
+<p>The six specialists are all going to use exactly the same network
+architecture (a simple approach, not necessarily the best).  Because
+training is bound to take much longer now than before, let's think
+about a strategy so that we don't have to wait for <tt class="docutils literal">max_epochs</tt> to
+finish, even if the validation error stopped improving much earlier.
+This is called <em>early stopping</em>, and we'll write another
+<tt class="docutils literal">on_epoch_finished</tt> callback to take care of that.  Here's the
+implementation:</p>
+
+
+<div class="pygments_murphy"><pre><span class="k">class</span> <span class="nc">EarlyStopping</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">patience</span> <span class="o">=</span> <span class="n">patience</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_valid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_valid_epoch</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">best_weights</span> <span class="o">=</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">nn</span><span class="p">,</span> <span class="n">train_history</span><span class="p">):</span>
+        <span class="n">current_valid</span> <span class="o">=</span> <span class="n">train_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s">&#39;valid_loss&#39;</span><span class="p">]</span>
+        <span class="n">current_epoch</span> <span class="o">=</span> <span class="n">train_history</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s">&#39;epoch&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">current_valid</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_valid</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best_valid</span> <span class="o">=</span> <span class="n">current_valid</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best_valid_epoch</span> <span class="o">=</span> <span class="n">current_epoch</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">best_weights</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">get_all_params_values</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_valid_epoch</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">patience</span> <span class="o">&lt;</span> <span class="n">current_epoch</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Early stopping.&quot;</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">&quot;Best valid loss was {:.6f} at epoch {}.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">best_valid</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">best_valid_epoch</span><span class="p">))</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">load_params_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">best_weights</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">StopIteration</span><span class="p">()</span>
+</pre></div>
+
+
+
+<p>You can see that there's two branches inside the <tt class="docutils literal">__call__</tt>: the
+first where the current validation score is better than what we've
+previously seen, and the second where the best validation epoch was
+more than <tt class="docutils literal">self.patience</tt> epochs in the past.  In the first case we
+store away the weights:</p>
+
+
+<div class="pygments_murphy"><pre>          <span class="bp">self</span><span class="o">.</span><span class="n">best_weights</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">get_all_params_values</span><span class="p">()</span>
+</pre></div>
+
+
+
+<p>In the second case, we set the weights of the network back to those
+<tt class="docutils literal">best_weights</tt> before raising <tt class="docutils literal">StopIteration</tt>, signalling to
+<tt class="docutils literal">NeuralNet</tt> that we want to stop training.</p>
+
+
+<div class="pygments_murphy"><pre>          <span class="n">nn</span><span class="o">.</span><span class="n">load_params_from</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">best_weights</span><span class="p">)</span>
+          <span class="k">raise</span> <span class="ne">StopIteration</span><span class="p">()</span>
+</pre></div>
+
+
+
+<p>Let's update the list of <tt class="docutils literal">on_epoch_finished</tt> handlers in our net's
+definition and use <tt class="docutils literal">EarlyStopping</tt>:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">net8</span> <span class="o">=</span> <span class="n">NeuralNet</span><span class="p">(</span>
+    <span class="c"># ...</span>
+    <span class="n">on_epoch_finished</span><span class="o">=</span><span class="p">[</span>
+        <span class="n">AdjustVariable</span><span class="p">(</span><span class="s">&#39;update_learning_rate&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">),</span>
+        <span class="n">AdjustVariable</span><span class="p">(</span><span class="s">&#39;update_momentum&#39;</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mf">0.9</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="mf">0.999</span><span class="p">),</span>
+        <span class="n">EarlyStopping</span><span class="p">(</span><span class="n">patience</span><span class="o">=</span><span class="mi">200</span><span class="p">),</span>
+        <span class="p">],</span>
+    <span class="c"># ...</span>
+    <span class="p">)</span>
+</pre></div>
+
+
+
+<p>So far so good, but how would we go about defining those specialists
+and what they should each predict?  Let's make a list for that:</p>
+
+
+<div class="pygments_murphy"><pre><span class="n">SPECIALIST_SETTINGS</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">(</span>
+            <span class="s">&#39;left_eye_center_x&#39;</span><span class="p">,</span> <span class="s">&#39;left_eye_center_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;right_eye_center_x&#39;</span><span class="p">,</span> <span class="s">&#39;right_eye_center_y&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="n">flip_indices</span><span class="o">=</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)),</span>
+        <span class="p">),</span>
+
+    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">(</span>
+            <span class="s">&#39;nose_tip_x&#39;</span><span class="p">,</span> <span class="s">&#39;nose_tip_y&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="n">flip_indices</span><span class="o">=</span><span class="p">(),</span>
+        <span class="p">),</span>
+
+    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">(</span>
+            <span class="s">&#39;mouth_left_corner_x&#39;</span><span class="p">,</span> <span class="s">&#39;mouth_left_corner_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;mouth_right_corner_x&#39;</span><span class="p">,</span> <span class="s">&#39;mouth_right_corner_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;mouth_center_top_lip_x&#39;</span><span class="p">,</span> <span class="s">&#39;mouth_center_top_lip_y&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="n">flip_indices</span><span class="o">=</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">)),</span>
+        <span class="p">),</span>
+
+    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">(</span>
+            <span class="s">&#39;mouth_center_bottom_lip_x&#39;</span><span class="p">,</span>
+            <span class="s">&#39;mouth_center_bottom_lip_y&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="n">flip_indices</span><span class="o">=</span><span class="p">(),</span>
+        <span class="p">),</span>
+
+    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">(</span>
+            <span class="s">&#39;left_eye_inner_corner_x&#39;</span><span class="p">,</span> <span class="s">&#39;left_eye_inner_corner_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;right_eye_inner_corner_x&#39;</span><span class="p">,</span> <span class="s">&#39;right_eye_inner_corner_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;left_eye_outer_corner_x&#39;</span><span class="p">,</span> <span class="s">&#39;left_eye_outer_corner_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;right_eye_outer_corner_x&#39;</span><span class="p">,</span> <span class="s">&#39;right_eye_outer_corner_y&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="n">flip_indices</span><span class="o">=</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">)),</span>
+        <span class="p">),</span>
+
+    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">(</span>
+            <span class="s">&#39;left_eyebrow_inner_end_x&#39;</span><span class="p">,</span> <span class="s">&#39;left_eyebrow_inner_end_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;right_eyebrow_inner_end_x&#39;</span><span class="p">,</span> <span class="s">&#39;right_eyebrow_inner_end_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;left_eyebrow_outer_end_x&#39;</span><span class="p">,</span> <span class="s">&#39;left_eyebrow_outer_end_y&#39;</span><span class="p">,</span>
+            <span class="s">&#39;right_eyebrow_outer_end_x&#39;</span><span class="p">,</span> <span class="s">&#39;right_eyebrow_outer_end_y&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="n">flip_indices</span><span class="o">=</span><span class="p">((</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">)),</span>
+        <span class="p">),</span>
+    <span class="p">]</span>
+</pre></div>
+
+
+
+<p>We already discussed the need for <tt class="docutils literal">flip_indices</tt> in the <a class="reference internal" href="#data-augmentation">Data
+augmentation</a> section.  Remember from section <a class="reference internal" href="#the-data">The data</a> that our
+<tt class="docutils literal">load_data()</tt> function takes an optional list of columns to extract.
+We'll make use of this feature when we fit the specialist models in a
+new function <tt class="docutils literal">fit_specialists()</tt>:</p>
+
+
+<div class="pygments_murphy"><pre><span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span> <span class="nn">sklearn.base</span> <span class="kn">import</span> <span class="n">clone</span>
+
+<span class="k">def</span> <span class="nf">fit_specialists</span><span class="p">():</span>
+    <span class="n">specialists</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">setting</span> <span class="ow">in</span> <span class="n">SPECIALIST_SETTINGS</span><span class="p">:</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="n">setting</span><span class="p">[</span><span class="s">&#39;columns&#39;</span><span class="p">]</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load2d</span><span class="p">(</span><span class="n">cols</span><span class="o">=</span><span class="n">cols</span><span class="p">)</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">output_num_units</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">batch_iterator_train</span><span class="o">.</span><span class="n">flip_indices</span> <span class="o">=</span> <span class="n">setting</span><span class="p">[</span><span class="s">&#39;flip_indices&#39;</span><span class="p">]</span>
+        <span class="c"># set number of epochs relative to number of training examples:</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">max_epochs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">1e7</span> <span class="o">/</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s">&#39;kwargs&#39;</span> <span class="ow">in</span> <span class="n">setting</span><span class="p">:</span>
+            <span class="c"># an option &#39;kwargs&#39; in the settings list may be used to</span>
+            <span class="c"># set any other parameter of the net:</span>
+            <span class="nb">vars</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">setting</span><span class="p">[</span><span class="s">&#39;kwargs&#39;</span><span class="p">])</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Training model for columns {} for {} epochs&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">cols</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">max_epochs</span><span class="p">))</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">specialists</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;net-specialists.pickle&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="c"># we persist a dictionary with all models:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">specialists</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>There's nothing too spectacular happening here.  Instead of training
+and persisting a single model, we do it with a list of models that are
+saved in a dictionary that maps columns to the trained <tt class="docutils literal">NeuralNet</tt>
+instances.  Now despite our early stopping, this will still take
+forever to train (though by forever I don't mean <a class="reference external" href="https://twitter.com/fulhack/status/527900817672929280">Google-forever</a>, I mean
+maybe half a day on a single GPU); I don't recommend that you actually
+run this.</p>
+<p>We could of course easily parallelize training these specialist nets
+across GPUs, but maybe you don't have the luxury of access to a box
+with multiple CUDA GPUs.  In the next section we'll talk about another
+way to cut down on training time.  But let's take a look at the
+results of fitting these expensive to train specialists first:</p>
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/lc5.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/lc5.png" />
+<p class="caption">Learning curves for six specialist models.  The solid lines
+represent RMSE on the validation set, the dashed lines errors on
+the train set.  <tt class="docutils literal">mean</tt> is the mean validation error of all nets
+weighted by number of target values.  All curves have been scaled
+to have the same length on the x axis.</p>
+</div>
+<p>Lastly, this solution gives us a <a class="reference external" href="https://www.kaggle.com/c/facial-keypoints-detection/leaderboard">Kaggle leaderboard</a>
+score of <strong>2.17</strong> RMSE, which corresponds to the second place at the
+time of writing (right behind yours truly).</p>
+</div>
+<div class="section" id="supervised-pre-training">
+<h3><a class="toc-backref" href="#id10">Supervised pre-training</a></h3>
+<p>In the last section of this tutorial, we'll discuss a way to make
+training our specialists faster.  The idea is this: instead of
+initializing the weights of each specialist network at random, we'll
+initialize them with the weights that were learned in <tt class="docutils literal">net6</tt> or
+<tt class="docutils literal">net7</tt>.  Remember from our <tt class="docutils literal">EarlyStopping</tt> implementation that
+copying weights from one network to another is as simple as using the
+<tt class="docutils literal">load_params_from()</tt> method.  Let's modify the <tt class="docutils literal">fit_specialists</tt>
+method to do just that.  I'm again marking the lines that changed
+compared to the previous implementation with a <tt class="docutils literal"># !</tt> comment:</p>
+
+
+<div class="pygments_murphy"><pre><span class="k">def</span> <span class="nf">fit_specialists</span><span class="p">(</span><span class="n">fname_pretrain</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">fname_pretrain</span><span class="p">:</span>  <span class="c"># !</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">fname_pretrain</span><span class="p">,</span> <span class="s">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>  <span class="c"># !</span>
+            <span class="n">net_pretrain</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>  <span class="c"># !</span>
+    <span class="k">else</span><span class="p">:</span>  <span class="c"># !</span>
+        <span class="n">net_pretrain</span> <span class="o">=</span> <span class="bp">None</span>  <span class="c"># !</span>
+
+    <span class="n">specialists</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+    <span class="k">for</span> <span class="n">setting</span> <span class="ow">in</span> <span class="n">SPECIALIST_SETTINGS</span><span class="p">:</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="n">setting</span><span class="p">[</span><span class="s">&#39;columns&#39;</span><span class="p">]</span>
+        <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">load2d</span><span class="p">(</span><span class="n">cols</span><span class="o">=</span><span class="n">cols</span><span class="p">)</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">clone</span><span class="p">(</span><span class="n">net</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">output_num_units</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">batch_iterator_train</span><span class="o">.</span><span class="n">flip_indices</span> <span class="o">=</span> <span class="n">setting</span><span class="p">[</span><span class="s">&#39;flip_indices&#39;</span><span class="p">]</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">max_epochs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="mf">4e6</span> <span class="o">/</span> <span class="n">y</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s">&#39;kwargs&#39;</span> <span class="ow">in</span> <span class="n">setting</span><span class="p">:</span>
+            <span class="c"># an option &#39;kwargs&#39; in the settings list may be used to</span>
+            <span class="c"># set any other parameter of the net:</span>
+            <span class="nb">vars</span><span class="p">(</span><span class="n">model</span><span class="p">)</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">setting</span><span class="p">[</span><span class="s">&#39;kwargs&#39;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">net_pretrain</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>  <span class="c"># !</span>
+            <span class="c"># if a pretrain model was given, use it to initialize the</span>
+            <span class="c"># weights of our new specialist model:</span>
+            <span class="n">model</span><span class="o">.</span><span class="n">load_params_from</span><span class="p">(</span><span class="n">net_pretrain</span><span class="p">)</span>  <span class="c"># !</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s">&quot;Training model for columns {} for {} epochs&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">cols</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">max_epochs</span><span class="p">))</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+        <span class="n">specialists</span><span class="p">[</span><span class="n">cols</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s">&#39;net-specialists.pickle&#39;</span><span class="p">,</span> <span class="s">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="c"># this time we&#39;re persisting a dictionary with all models:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">specialists</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+</pre></div>
+
+
+
+<p>It turns out that initializing those nets not at random, but by
+re-using weights from one of the networks we learned earlier has in
+fact two big advantages: One is that training converges much faster;
+maybe four times faster in this case.  The second advantage is that it
+also helps get better generalization; pre-training acts as a
+regularizer.  Here's the same learning curves as before, but now for
+the pre-trained nets:</p>
+<div class="figure">
+<img alt="http://danielnouri.org/media/kfkd/lc6.png" class="img-responsive" src="http://danielnouri.org/media/kfkd/lc6.png" />
+<p class="caption">Learning curves for six specialist models that were pre-trained.</p>
+</div>
+<p>Finally, the score for this solution on the challenge's leaderboard is
+<strong>2.13</strong> RMSE.  Again the second place, but getting closer!</p>
+</div>
+<div class="section" id="conclusion">
+<h3><a class="toc-backref" href="#id11">Conclusion</a></h3>
+<p>There's probably a dozen ideas that you have that you want to try out.
+You can find the <a class="reference external" href="https://github.com/dnouri/kfkd-tutorial/blob/master/kfkd.py">source code for the final solution</a> here
+to download and play around with.  It also includes the bit that
+generates a submission file for the Kaggle challenge.  Run <tt class="docutils literal">python
+kfkd.py</tt> to find out how to use the script on the command-line.</p>
+<p>Here's a couple of the more obvious things that you could try out at
+this point: Try optimizing the parameters for the individual
+specialist networks; this is something that we haven't done so far.
+Observe that the six nets that we trained all have different levels of
+overfitting.  If they're not or hardly overfitting, like for the green
+and the yellow net above, you could try to decrease the amount of
+dropout.  Likewise, if it's overfitting badly, like the black and
+purple nets, you could try increasing the amount of dropout.  In the
+definition of <tt class="docutils literal">SPECIALIST_SETTINGS</tt> we can already add some
+net-specific settings; so say we wanted to add more regularization to
+the second net, then we could change the second entry of the list to
+look like so:</p>
+
+
+<div class="pygments_murphy"><pre>    <span class="nb">dict</span><span class="p">(</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">(</span>
+            <span class="s">&#39;nose_tip_x&#39;</span><span class="p">,</span> <span class="s">&#39;nose_tip_y&#39;</span><span class="p">,</span>
+            <span class="p">),</span>
+        <span class="n">flip_indices</span><span class="o">=</span><span class="p">(),</span>
+        <span class="n">kwargs</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">dropout2_p</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">dropout3_p</span><span class="o">=</span><span class="mf">0.4</span><span class="p">),</span>  <span class="c"># !</span>
+        <span class="p">),</span>
+</pre></div>
+
+
+
+<p>And there's a ton of other things that you could try to tweak.  Maybe
+you'll try adding another convolutional or fully connected layer?  I'm
+curious to hear about improvements that you're able to come up with in
+the comments.</p>
+<hr class="docutils" />
+<p><em>Edit:</em> Kaggle <a class="reference external" href="https://www.kaggle.com/c/facial-keypoints-detection/details/deep-learning-tutorial">features this tutorial on their site</a>
+where they've included instructions on how to use Amazon GPU instances
+to run the tutorial, which is useful if you don't own a CUDA-capable
+GPU.</p>
+</div>
+</div>
+
+
+  </div>
+
+
+
+<p class="recommend-buttons mt">
+  <a href="https://twitter.com/share" class="twitter-share-button" data-count="horizontal" data-via="dnouri" data-url="http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial">Tweet</a>
+  <g:plusone href="http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial" size="medium"></g:plusone>
+</p>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+		<div class="container">
+			<div class="row">
+              <div class="col-lg-8 col-lg-offset-2">
+
+<div id="disqus_thread"></div>
+<script type="text/javascript">
+  var disqus_url = "http://danielnouri.org/notes/2014/12/17/using-convolutional-neural-nets-to-detect-facial-keypoints-tutorial";
+</script>
+<script type="text/javascript" src="http://disqus.com/forums/danielnourisblog/embed.js"></script>
+<noscript><a href="http://danielnourisblog.disqus.com/?url=ref">View the discussion thread.</a></noscript><a href="http://disqus.com" class="dsq-brlink">blog comments powered by <span class="logo-disqus">Disqus</span></a>
+
+              </div>
+			</div>
+		</div>
+
+        </div><!-- End Prose Block -->
+      </div><!-- End Main Block -->
+      <div id="footer">
+        
+  	<div id="social">
+		<div class="container">
+			<div class="row centered">
+				<div class="col-lg-8 col-lg-offset-2">
+					<div class="col-md-3">
+						<a href="mailto:daniel.nouri@gmail.com"><i class="fa fa-envelope"></i></a>
+					</div>
+					<div class="col-md-3">
+						<a href="https://twitter.com/dnouri"><i class="fa fa-twitter"></i></a>
+					</div>
+					<div class="col-md-3">
+						<a href="https://github.com/dnouri"><i class="fa fa-github"></i></a>
+					</div>
+					<div class="col-md-3">
+						<a href="https://www.linkedin.com/in/nouri"><i class="fa fa-linkedin"></i></a>
+					</div>
+				</div>
+			</div>
+		</div><!-- /container -->
+	</div><!-- /social -->
+
+</p>
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+		var links = document.getElementsByTagName('a');
+		var query = '?';
+		for(var i = 0; i < links.length; i++) {
+			if(links[i].href.indexOf('#disqus_thread') >= 0) {
+				query += 'url' + i + '=' + encodeURIComponent(links[i].href) + '&';
+			}
+		}
+		document.write('<script charset="utf-8" type="text/javascript" src="http://disqus.com/forums/danielnourisblog/get_num_replies.js' + query + '"></' + 'script>');
+	})();
+//]]>
+</script>
+<script src="http://www.google-analytics.com/urchin.js" type="text/javascript"> 
+</script> 
+<script type="text/javascript"> 
+<!--
+_uacct = "UA-1281637-1";
+urchinTracker();
+-->
+</script>
+<script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>
+
+<script type="text/javascript">
+  (function() {
+    var po = document.createElement('script'); po.type = 'text/javascript'; po.async = true;
+    po.src = 'https://apis.google.com/js/plusone.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(po, s);
+  })();
+</script>
+
+
+      </div> <!-- End Footer -->
+    </div> <!-- End Content -->
+  </body>
+</html>
+
+
+
+
