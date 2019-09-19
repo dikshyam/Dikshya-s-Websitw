@@ -50,4 +50,22 @@ subtitle = ""
   name = "Probability & Calculus"
   description = "90%"
 
+[[feature]]
+  icon = "aws"
+  icon_pack = "fas"
+  name = "Amazon AWS"
+  description = "90%"
+
+[[feature]]
+  icon = "database"
+  icon_pack = "fas"
+  name = "SQL"
+  description = "95%"
+
+[[feature]]
+  icon = "github"
+  icon_pack = "fas"
+  name = "Github"
+  description = "85%"
+
 +++
