@@ -29,7 +29,7 @@ subtitle = ""
   # gradient_end = "SkyBlue"
   
   # Background image.
-  image = "image/demo.jpg"  # Name of image in `static/img/`.
+  image = "headers/bubbles-wide.jpg"  # Name of image in `static/img/`.
   image_darken = 0.6  # Darken the image? Range 0-1 where 0 is transparent and 1 is opaque.
 
   # Text color (true=light or false=dark).
@@ -54,6 +54,7 @@ subtitle = ""
 
 
 **Quote of the Week** 
+
 Only two things are infinite, the universe and human stupidity, and I'm not sure about the former: Albert Einstein.
 
 
