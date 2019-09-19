@@ -8,7 +8,7 @@ headless = true  # This file represents a page section.
 active = true  # Activate this widget? true/false
 weight = 2  # Order that this section will appear.
 
-title = "Quote of the week"
+title = "Welcome to **Dikshya's** Portfolio!"
 subtitle = ""
 
 [design]
@@ -47,7 +47,7 @@ subtitle = ""
  css_class = ""
 +++
 
-_Only two things are infinite, the universe and human stupidity, and I'm not sure about the former_: Albert Einstein.
+#_Only two things are infinite, the universe and human stupidity, and I'm not sure about the former_: #**Albert Einstein**
 
 **What's New?**
 
