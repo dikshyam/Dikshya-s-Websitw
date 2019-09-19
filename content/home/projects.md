@@ -26,12 +26,12 @@ subtitle = ""
     tag = "*"
   
   [[content.filter_button]]
-    name = "Classical Machine Learning Models"
-    tag = "Classical Machine Learning Models"
+    name = "Classical ML Problems"
+    tag = "Classical ML Problems"
   
   [[content.filter_button]]
-    name = "Deep Learning Models"
-    tag = "Deep Learning Models"
+    name = "Deep Learning Problems"
+    tag = "Deep Learning Problems"
   
   [[content.filter_button]]
     name = "Other"
