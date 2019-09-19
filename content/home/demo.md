@@ -50,9 +50,10 @@ subtitle = ""
 **What's New?**
 
 - **[Pandas 101](https://github.com/dikshyam/DSBA6156-AML/tree/master/Pandas101)**
+- **[My Internship Experience](https://meetdikshya.netlify.com/post/amazon/)**
+
 
 **Quote of the Week** 
-
-- * Only two things are infinite, the universe and human stupidity, and I'm not sure about the former * : Albert Einstein.
+Only two things are infinite, the universe and human stupidity, and I'm not sure about the former: Albert Einstein.
 
 
