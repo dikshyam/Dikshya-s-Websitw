@@ -49,18 +49,13 @@ subtitle = ""
 
 _Only two things are infinite, the universe and human stupidity, and I'm not sure about the former_: Albert Einstein.
 
-title = "**What's New?**"
-subtitle = ""
-
-
+**What's New?**
 
 - [x] **[Pandas 101](https://github.com/dikshyam/DSBA6156-AML/tree/master/Pandas101)**
 - [x] **[My Internship Experience](https://meetdikshya.netlify.com/post/amazon/)**
 
 
-title = "**Coming up Soon**"
-subtitle = ""
-
+**Coming up Soon**
 
 - [ ] **Where Stats meet ML: Know your distributions**
 
