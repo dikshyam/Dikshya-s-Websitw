@@ -73,6 +73,6 @@ user_groups:
 
 **Dikshya** is a Data Science enthusiast, skilled in machine learning, statistics, problem solving, and programming. Among others, her research activities include applications of machine learning to solve problems in finance and healthcare. After receiving her Bachelor's from India, Dikshya joined the University of North Carolina as Graduate Student majoring in Data Science.
 
-Dikshya has many years of experience with coding in Python. Dikshya loves to write and talk about data science, machine learning, and Python, and she is very motivated to help people developing data-driven solutions without necessarily requiring a machine learning background. 
+Dikshya has 2+ years of experience with coding in Python. Dikshya loves to write and talk about data science, machine learning, and Python, and she is very motivated to help people developing data-driven solutions without necessarily requiring a machine learning background. She's served as the Teaching Assistant for a couple of highly technical courses and 
 
-In her free time, Dikshya loves to contribute to open source projects, and methods that he implemented are now successfully used in machine learning competitions such as Kaggle.
+In her free time, Dikshya loves to contribute to open source projects, and methods that he implemented are now successfully used in machine learning competitions such as Kaggle. In spare time, Dikshya spends most of her time singing on her Ukulele.
