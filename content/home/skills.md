@@ -40,7 +40,7 @@ subtitle = ""
   
 [[feature]]
   icon = "r-project"
-  icon_pack = "fas"
+  icon_pack = "fab"
   name = "R"
   description = "90%"
 
@@ -52,19 +52,19 @@ subtitle = ""
 
 [[feature]]
   icon = "aws"
-  icon_pack = "fas"
+  icon_pack = "fab"
   name = "Amazon AWS"
   description = "90%"
 
 [[feature]]
   icon = "database"
-  icon_pack = "fas"
+  icon_pack = "fab"
   name = "SQL"
   description = "95%"
 
 [[feature]]
   icon = "github"
-  icon_pack = "fas"
+  icon_pack = "fab"
   name = "Github"
   description = "85%"
 
