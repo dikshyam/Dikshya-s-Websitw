@@ -8,7 +8,7 @@ headless = true  # This file represents a page section.
 active = true  # Activate this widget? true/false
 weight = 2  # Order that this section will appear.
 
-title = "Welcome to **Dikshya's** Portfolio!"
+title = "Quote of the week"
 subtitle = ""
 
 [design]
@@ -29,7 +29,7 @@ subtitle = ""
   # gradient_end = "SkyBlue"
   
   # Background image.
-  #image = "headers/demo.jpg"  # Name of image in `static/img/`.
+  image = "headers/demo.jpg"  # Name of image in `static/img/`.
   #image_darken = 0.6  # Darken the image? Range 0-1 where 0 is transparent and 1 is opaque.
 
   # Text color (true=light or false=dark).
@@ -47,25 +47,6 @@ subtitle = ""
  css_class = ""
 +++
 
-
-**What's New?**
-
-- [x] **[Pandas 101](https://github.com/dikshyam/DSBA6156-AML/tree/master/Pandas101)**
-- [x] **[My Internship Experience](https://meetdikshya.netlify.com/post/amazon/)**
-
-
-
-
-
-
-
-
-
-
-**Coming up Soon**
-
-- [ ] **Where Stats meet ML: Know your distributions**
-
-
+_Only two things are infinite, the universe and human stupidity, and I'm not sure about the former_: Albert Einstein.
 
 
