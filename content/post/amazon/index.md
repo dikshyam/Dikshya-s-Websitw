@@ -1,7 +1,7 @@
 ---
 title: 'My Internship Experience'
 subtitle: '#AmazonDiaries'
-summary: Create a beautifully simple website in under 10 minutes.
+summary: What I did Summer of 2019! 
 authors:
 - admin
 tags:
